@@ -5,6 +5,7 @@ namespace DailyCheckinBundle\Procedure;
 use DailyCheckinBundle\Repository\RecordRepository;
 use DailyCheckinBundle\Repository\RewardRepository;
 use DailyCheckinBundle\Service\CheckinPrizeService;
+use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Tourze\JsonRPC\Core\Attribute\MethodDoc;
@@ -19,6 +20,7 @@ use Tourze\JsonRPCLogBundle\Attribute\Log;
 #[IsGranted('IS_AUTHENTICATED_FULLY')]
 #[Log]
 #[MethodExpose('SubmitCheckinAward')]
+#[WithMonologChannel('procedure')]
 class SubmitCheckinAward extends LockableProcedure
 {
     /**
@@ -35,7 +37,7 @@ class SubmitCheckinAward extends LockableProcedure
         private readonly RecordRepository $recordRepository,
         private readonly RewardRepository $rewardRepository,
         private readonly CheckinPrizeService $checkinPrizeService,
-        private readonly LoggerInterface $procedureLogger,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -46,14 +48,14 @@ class SubmitCheckinAward extends LockableProcedure
             throw new ApiException('签到记录不存在');
         }
         if (!$record->hasAward()) {
-            $this->procedureLogger->error('签到记录未获得奖品', [
+            $this->logger->error('签到记录未获得奖品', [
                 'record' => $record->retrieveApiArray(),
             ]);
             throw new ApiException('无法获得奖品');
         }
 
         if (!$record->getAwards()->isEmpty()) {
-            $this->procedureLogger->error('签到记录已获得过奖品', [
+            $this->logger->error('签到记录已获得过奖品', [
                 'record' => $record->retrieveApiArray(),
             ]);
             throw new ApiException('已获得奖品');

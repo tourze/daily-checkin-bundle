@@ -12,6 +12,7 @@ use DailyCheckinBundle\Repository\RecordRepository;
 use DailyCheckinBundle\Service\CheckinPrizeService;
 use Doctrine\Common\Collections\Criteria;
 use Doctrine\ORM\EntityManagerInterface;
+use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
@@ -31,6 +32,7 @@ use Tourze\JsonRPCLogBundle\Procedure\LogFormatProcedure;
 #[IsGranted('IS_AUTHENTICATED_FULLY')]
 #[Log]
 #[MethodExpose('DoCheckin')]
+#[WithMonologChannel('procedure')]
 class DoCheckin extends LockableProcedure implements LogFormatProcedure
 {
     #[MethodParam('签到活动ID')]
@@ -46,7 +48,7 @@ class DoCheckin extends LockableProcedure implements LogFormatProcedure
         private readonly RecordRepository $recordRepository,
         private readonly CheckinPrizeService $checkinPrizeService,
         private readonly Security $security,
-        private readonly LoggerInterface $procedureLogger,
+        private readonly LoggerInterface $logger,
         private readonly EventDispatcherInterface $eventDispatcher,
         private readonly EntityManagerInterface $entityManager,
     ) {
@@ -135,7 +137,7 @@ class DoCheckin extends LockableProcedure implements LogFormatProcedure
             $this->entityManager->persist($record);
             $this->entityManager->flush();
         } catch (\Throwable $exception) {
-            $this->procedureLogger->error('保存签到记录时发生异常', [
+            $this->logger->error('保存签到记录时发生异常', [
                 'exception' => $exception,
                 'record' => $record,
             ]);
@@ -145,7 +147,7 @@ class DoCheckin extends LockableProcedure implements LogFormatProcedure
         $result['hasAward'] = false;
 
         $prizeRes = $this->checkinPrizeService->getPrize($activity, $record->getCheckinTimes());
-        $this->procedureLogger->info('签到应得奖励', [
+        $this->logger->info('签到应得奖励', [
             'prizeRes' => $prizeRes,
         ]);
         $result = array_merge($result, $prizeRes);
