@@ -2,7 +2,6 @@
 
 namespace DailyCheckinBundle\Service;
 
-use AppBundle\Service\CreditManager;
 use Carbon\Carbon;
 use CouponBundle\Service\CouponService;
 use CreditBundle\Service\AccountService;
@@ -16,7 +15,6 @@ use DailyCheckinBundle\Enum\RewardGetType;
 use DailyCheckinBundle\Enum\RewardType;
 use DailyCheckinBundle\Event\BeforeOrPrizeReturnEvent;
 use DailyCheckinBundle\Repository\AwardRepository;
-use DailyCheckinBundle\Repository\RecordRepository;
 use DailyCheckinBundle\Repository\RewardRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -28,12 +26,10 @@ class CheckinPrizeService
         private readonly RewardRepository $rewardRepository,
         private readonly AwardRepository $awardRepository,
         private readonly LoggerInterface $logger,
-        private readonly RecordRepository $recordRepository,
         private readonly EventDispatcherInterface $eventDispatcher,
         private readonly ?CouponService $couponService,
         private readonly ?CurrencyService $currencyService,
         private readonly ?AccountService $accountService,
-        private readonly CreditManager $creditManager,
         private readonly ?TransactionService $transactionService,
         private readonly EntityManagerInterface $entityManager,
     ) {
@@ -138,7 +134,7 @@ class CheckinPrizeService
 
         if (RewardType::CREDIT === $reward->getType() && $this->accountService && $this->transactionService) {
             // 给积分，point取奖项里的值
-            $integralName = $_ENV['APP_ENV_INTERGRAL_NAME'] ?? $this->creditManager->getOneCredit();
+            $integralName = $_ENV['DEFAULT_CREDIT_CURRENCY_CODE'] ?? 'CREDIT';
             $currency = $this->currencyService->getCurrencyByCode($integralName);
             $inAccount = $this->accountService->getAccountByUser($record->getUser(), $currency);
 
