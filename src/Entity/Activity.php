@@ -8,7 +8,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use DoctrineEnhanceBundle\Traits\WechatShareZoneConfigAware;
+use Symfony\Component\Serializer\Attribute\Groups;
 use Tourze\Arrayable\ApiArrayInterface;
 use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
 use Tourze\DoctrineSnowflakeBundle\Service\SnowflakeIdGenerator;
@@ -41,41 +41,6 @@ use Tourze\EasyAdmin\Attribute\Permission\AsPermission;
 #[ORM\Table(name: 'daily_checkin_activity', options: ['comment' => '打卡活动'])]
 class Activity implements \Stringable, ApiArrayInterface
 {
-    #[Filterable]
-    #[IndexColumn]
-    #[ListColumn(order: 98, sorter: true)]
-    #[ExportColumn]
-    #[CreateTimeColumn]
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true, options: ['comment' => '创建时间'])]
-    private ?\DateTimeInterface $createTime = null;
-
-    #[UpdateTimeColumn]
-    #[ListColumn(order: 99, sorter: true)]
-    #[Filterable]
-    #[ExportColumn]
-    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true, options: ['comment' => '更新时间'])]
-    private ?\DateTimeInterface $updateTime = null;
-
-    public function setCreateTime(?\DateTimeInterface $createdAt): void
-    {
-        $this->createTime = $createdAt;
-    }
-
-    public function getCreateTime(): ?\DateTimeInterface
-    {
-        return $this->createTime;
-    }
-
-    public function setUpdateTime(?\DateTimeInterface $updateTime): void
-    {
-        $this->updateTime = $updateTime;
-    }
-
-    public function getUpdateTime(): ?\DateTimeInterface
-    {
-        return $this->updateTime;
-    }
-
     #[FormField(title: '分享路径')]
     #[ORM\Column(length: 100, nullable: true, options: ['comment' => '分享路径'])]
     private ?string $sharePath = null;
@@ -128,8 +93,6 @@ class Activity implements \Stringable, ApiArrayInterface
             'sharePath' => $this->getSharePath(),
         ];
     }
-
-    use WechatShareZoneConfigAware;
 
     #[ExportColumn]
     #[ListColumn(order: -1, sorter: true)]
@@ -188,7 +151,7 @@ class Activity implements \Stringable, ApiArrayInterface
     #[CopyColumn]
     #[ListColumn(title: '奖品')]
     #[CurdAction(label: '奖品', drawerWidth: 1200)]
-    #[ORM\OneToMany(mappedBy: 'activity', targetEntity: Reward::class, cascade: ['persist'], orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: Reward::class, mappedBy: 'activity', cascade: ['persist'], orphanRemoval: true)]
     private Collection $rewards;
 
     #[FormField(span: 8)]
@@ -196,6 +159,59 @@ class Activity implements \Stringable, ApiArrayInterface
     #[ListColumn]
     #[ORM\Column(type: Types::STRING, length: 20, enumType: CheckinType::class, options: ['comment' => '签到类型'])]
     private ?CheckinType $checkinType = null;
+
+    #[Groups(['admin_curd', 'restful_read'])]
+    #[FormField(title: '朋友圈分享标题')]
+    #[ORM\Column(length: 100, nullable: true, options: ['comment' => '朋友圈分享标题'])]
+    private ?string $zoneShareTitle = null;
+
+    #[Groups(['admin_curd', 'restful_read'])]
+    #[FormField(title: '朋友圈分享图片')]
+    #[ORM\Column(length: 255, nullable: true, options: ['comment' => '朋友圈分享图片'])]
+    private ?string $zoneSharePicture = null;
+
+    #[Filterable]
+    #[IndexColumn]
+    #[ListColumn(order: 98, sorter: true)]
+    #[ExportColumn]
+    #[CreateTimeColumn]
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true, options: ['comment' => '创建时间'])]
+    private ?\DateTimeInterface $createTime = null;
+
+    #[UpdateTimeColumn]
+    #[ListColumn(order: 99, sorter: true)]
+    #[Filterable]
+    #[ExportColumn]
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true, options: ['comment' => '更新时间'])]
+    private ?\DateTimeInterface $updateTime = null;
+
+    public function getZoneShareTitle(): ?string
+    {
+        return $this->zoneShareTitle;
+    }
+
+    public function setZoneShareTitle(?string $zoneShareTitle): void
+    {
+        $this->zoneShareTitle = $zoneShareTitle;
+    }
+
+    public function getZoneSharePicture(): ?string
+    {
+        return $this->zoneSharePicture;
+    }
+
+    public function setZoneSharePicture(?string $zoneSharePicture): void
+    {
+        $this->zoneSharePicture = $zoneSharePicture;
+    }
+
+    public function retrieveWechatShareZoneConfig(): array
+    {
+        return [
+            'zoneShareTitle' => $this->getZoneShareTitle(),
+            'zoneSharePicture' => $this->getZoneSharePicture(),
+        ];
+    }
 
     public function __construct()
     {
@@ -359,5 +375,25 @@ class Activity implements \Stringable, ApiArrayInterface
             'times' => $this->getTimes(),
             'rewards' => $rewards,
         ];
+    }
+
+    public function setCreateTime(?\DateTimeInterface $createdAt): void
+    {
+        $this->createTime = $createdAt;
+    }
+
+    public function getCreateTime(): ?\DateTimeInterface
+    {
+        return $this->createTime;
+    }
+
+    public function setUpdateTime(?\DateTimeInterface $updateTime): void
+    {
+        $this->updateTime = $updateTime;
+    }
+
+    public function getUpdateTime(): ?\DateTimeInterface
+    {
+        return $this->updateTime;
     }
 }
