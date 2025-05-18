@@ -11,7 +11,6 @@ class DailyCheckinBundle extends Bundle implements BundleDependencyInterface
     {
         return [
             \Tourze\DoctrineIndexedBundle\DoctrineIndexedBundle::class => ['all' => true],
-            \CouponBundle\CouponBundle::class => ['all' => true],
         ];
     }
 }
