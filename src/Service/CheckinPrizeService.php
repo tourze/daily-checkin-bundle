@@ -3,7 +3,6 @@
 namespace DailyCheckinBundle\Service;
 
 use Carbon\Carbon;
-use CouponBundle\Service\CouponService;
 use CreditBundle\Service\AccountService;
 use CreditBundle\Service\CurrencyService;
 use CreditBundle\Service\TransactionService;
@@ -19,6 +18,7 @@ use DailyCheckinBundle\Repository\RewardRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
+use Tourze\CouponCoreBundle\Service\CouponService;
 
 class CheckinPrizeService
 {
