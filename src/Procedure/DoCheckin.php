@@ -72,8 +72,8 @@ class DoCheckin extends LockableProcedure implements LogFormatProcedure
         }
         /* @var Activity $activity */
 
-        $this->checkinDate = $this->checkinDate ? Carbon::parse($this->checkinDate) : $now;
-        $checkinDate = $this->checkinDate ? Carbon::parse($this->checkinDate) : $now;
+        $this->checkinDate = !empty($this->checkinDate) ? Carbon::parse($this->checkinDate) : $now;
+        $checkinDate = !empty($this->checkinDate) ? Carbon::parse($this->checkinDate) : $now;
 
         // todo 测试才允许一天签到多次
         $record = $this->recordRepository->findOneBy([
@@ -81,7 +81,7 @@ class DoCheckin extends LockableProcedure implements LogFormatProcedure
             'activity' => $activity,
             'checkinDate' => $checkinDate,
         ]);
-        if ($record) {
+        if ($record !== null) {
             return [
                 'id' => $record->getId(),
                 '__showToast' => [
@@ -111,7 +111,7 @@ class DoCheckin extends LockableProcedure implements LogFormatProcedure
             ->getQuery()
             ->getOneOrNullResult();
 
-        if (!$lastRecord || $lastRecord->getCheckinTimes() >= $activity->getTimes()) {
+        if ($lastRecord === null || $lastRecord->getCheckinTimes() >= $activity->getTimes()) {
             $record->setCheckinTimes(1);
         } else {
             // 连续签到

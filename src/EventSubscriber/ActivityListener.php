@@ -27,7 +27,7 @@ class ActivityListener
      */
     public function ensureDateValid(Activity $object): void
     {
-        if (!$object->getStartTime() || !$object->getEndTime()) {
+        if ($object->getStartTime() === null || $object->getEndTime() === null) {
             return;
         }
 

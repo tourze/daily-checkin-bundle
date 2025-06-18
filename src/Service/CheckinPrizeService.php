@@ -117,7 +117,7 @@ class CheckinPrizeService
 
     public function sendPrize(Reward $reward, Record $record): void
     {
-        if (RewardType::COUPON === $reward->getType() && $this->couponService) {
+        if (RewardType::COUPON === $reward->getType() && $this->couponService !== null) {
             // 发送优惠券
             $coupon = $this->couponService->detectCoupon($reward->getValue());
             $this->couponService->sendCode($record->getUser(), $coupon);
@@ -132,7 +132,7 @@ class CheckinPrizeService
             $this->entityManager->flush();
         }
 
-        if (RewardType::CREDIT === $reward->getType() && $this->accountService && $this->transactionService) {
+        if (RewardType::CREDIT === $reward->getType() && $this->accountService !== null && $this->transactionService !== null) {
             // 给积分，point取奖项里的值
             $integralName = $_ENV['DEFAULT_CREDIT_CURRENCY_CODE'] ?? 'CREDIT';
             $currency = $this->currencyService->getCurrencyByCode($integralName);

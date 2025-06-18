@@ -17,8 +17,7 @@ use Tourze\Arrayable\ApiArrayInterface;
 use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
 use Tourze\DoctrineSnowflakeBundle\Service\SnowflakeIdGenerator;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
-use Tourze\DoctrineUserBundle\Attribute\CreatedByColumn;
-use Tourze\DoctrineUserBundle\Attribute\UpdatedByColumn;
+use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 use Tourze\EasyAdmin\Attribute\Action\Creatable;
 use Tourze\EasyAdmin\Attribute\Action\Deletable;
 use Tourze\EasyAdmin\Attribute\Action\Editable;
@@ -40,10 +39,8 @@ use Tourze\EasyAdmin\Attribute\Permission\AsPermission;
 class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
 {
     use TimestampableAware;
+    use BlameableAware;
 
-    /**
-     * order值大的排序靠前。有效的值范围是[0, 2^32].
-     */
     #[IndexColumn]
     #[FormField]
     #[ListColumn(order: 95, sorter: true)]
@@ -76,14 +73,6 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
     #[ORM\CustomIdGenerator(SnowflakeIdGenerator::class)]
     #[ORM\Column(type: Types::BIGINT, nullable: false, options: ['comment' => 'ID'])]
     private ?string $id = null;
-
-    #[CreatedByColumn]
-    #[ORM\Column(nullable: true, options: ['comment' => '创建人'])]
-    private ?string $createdBy = null;
-
-    #[UpdatedByColumn]
-    #[ORM\Column(nullable: true, options: ['comment' => '更新人'])]
-    private ?string $updatedBy = null;
 
     #[FormField(span: 24)]
     #[Filterable]
@@ -130,9 +119,6 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
     #[ORM\Column(nullable: true, options: ['default' => '0', 'comment' => '每日数量'])]
     private ?int $dayLimit = 0;
 
-    /**
-     * 如果一个人啥都没中，那么就会必中兜底奖项.
-     */
     #[BoolColumn]
     #[FormField(span: 6)]
     #[ListColumn(tooltipDesc: '兜底奖项不判断库存，达到录入数量后仍会继续发放')]
@@ -156,12 +142,9 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '签到前图片'])]
     private ?string $beforePicture = null;
 
-    /**
-     * @BannerSelector()
-     */
     #[FormField]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '签到后图片'])]
-    private ?array $afterPicture = [];
+    private array $afterPicture = [];
 
     #[ImagePickerField]
     #[PictureColumn]
@@ -179,9 +162,6 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
     #[ORM\Column(type: Types::TEXT, length: 255, nullable: true, options: ['comment' => '备注'])]
     private ?string $remark = null;
 
-    /**
-     * @BannerSelector()
-     */
     #[FormField]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '其他照片'])]
     private ?array $otherPicture = [];
@@ -203,30 +183,6 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
     public function getId(): ?string
     {
         return $this->id;
-    }
-
-    public function setCreatedBy(?string $createdBy): self
-    {
-        $this->createdBy = $createdBy;
-
-        return $this;
-    }
-
-    public function getCreatedBy(): ?string
-    {
-        return $this->createdBy;
-    }
-
-    public function setUpdatedBy(?string $updatedBy): self
-    {
-        $this->updatedBy = $updatedBy;
-
-        return $this;
-    }
-
-    public function getUpdatedBy(): ?string
-    {
-        return $this->updatedBy;
     }
 
     public function getName(): ?string
@@ -343,7 +299,7 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         return $this;
     }
 
-    public function getAfterPicture(): ?array
+    public function getAfterPicture(): array
     {
         return $this->afterPicture;
     }
