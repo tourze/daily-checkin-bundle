@@ -18,22 +18,9 @@ use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
 use Tourze\DoctrineSnowflakeBundle\Service\SnowflakeIdGenerator;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineUserBundle\Traits\BlameableAware;
-use Tourze\EasyAdmin\Attribute\Action\Creatable;
-use Tourze\EasyAdmin\Attribute\Action\Deletable;
-use Tourze\EasyAdmin\Attribute\Action\Editable;
-use Tourze\EasyAdmin\Attribute\Column\BoolColumn;
-use Tourze\EasyAdmin\Attribute\Column\ExportColumn;
-use Tourze\EasyAdmin\Attribute\Column\ListColumn;
 use Tourze\EasyAdmin\Attribute\Column\PictureColumn;
-use Tourze\EasyAdmin\Attribute\Field\FormField;
 use Tourze\EasyAdmin\Attribute\Field\ImagePickerField;
-use Tourze\EasyAdmin\Attribute\Filter\Filterable;
-use Tourze\EasyAdmin\Attribute\Permission\AsPermission;
 
-#[AsPermission(title: '签到奖品')]
-#[Deletable]
-#[Editable]
-#[Creatable]
 #[ORM\Entity(repositoryClass: RewardRepository::class)]
 #[ORM\Table(name: 'daily_checkin_reward', options: ['comment' => '签到奖品'])]
 class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
@@ -42,8 +29,6 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
     use BlameableAware;
 
     #[IndexColumn]
-    #[FormField]
-    #[ListColumn(order: 95, sorter: true)]
     #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['default' => '0', 'comment' => '次序值'])]
     private ?int $sortNumber = 0;
 
@@ -66,34 +51,22 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         ];
     }
 
-    #[ExportColumn]
-    #[ListColumn(order: -1, sorter: true)]
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'CUSTOM')]
     #[ORM\CustomIdGenerator(SnowflakeIdGenerator::class)]
     #[ORM\Column(type: Types::BIGINT, nullable: false, options: ['comment' => 'ID'])]
     private ?string $id = null;
 
-    #[FormField(span: 24)]
-    #[Filterable]
-    #[ListColumn]
     #[ORM\Column(type: Types::STRING, length: 100, options: ['comment' => '名称'])]
     private ?string $name = null;
 
-    #[FormField(span: 6)]
-    #[ListColumn]
     #[ORM\Column(type: Types::STRING, length: 50, enumType: RewardType::class, options: ['comment' => '类型'])]
     private ?RewardType $type = null;
 
-    #[FormField(span: 12)]
-    #[Filterable]
-    #[ListColumn]
     #[ORM\Column(type: Types::STRING, length: 255, options: ['comment' => '奖项'])]
     private ?string $value = null;
 
     #[IndexColumn]
-    #[FormField(span: 6)]
-    #[ListColumn(sorter: true)]
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => '签到次数'])]
     private ?int $times = null;
 
@@ -109,60 +82,43 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
     #[ORM\OneToMany(mappedBy: 'reward', targetEntity: Award::class)]
     private Collection $awards;
 
-    #[FormField(span: 8)]
-    #[ListColumn(sorter: true)]
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => '总数量'])]
     private ?int $quantity = 0;
 
-    #[FormField(span: 8)]
-    #[ListColumn(sorter: true, tooltipDesc: '每日数量为0时，表示不限制')]
     #[ORM\Column(nullable: true, options: ['default' => '0', 'comment' => '每日数量'])]
     private ?int $dayLimit = 0;
 
-    #[BoolColumn]
-    #[FormField(span: 6)]
-    #[ListColumn(tooltipDesc: '兜底奖项不判断库存，达到录入数量后仍会继续发放')]
     #[ORM\Column(type: Types::BOOLEAN, nullable: true, options: ['comment' => '兜底奖项'])]
     private ?bool $isDefault = false;
 
-    #[BoolColumn]
-    #[FormField]
     #[Groups(['restful_read'])]
     #[ORM\Column(type: Types::BOOLEAN, options: ['comment' => '是否在奖品列表展示', 'default' => true])]
     private ?bool $canShowPrize = true;
 
-    #[FormField(span: 6)]
-    #[ListColumn]
     #[ORM\Column(length: 10, enumType: RewardGetType::class, options: ['comment' => '奖品互斥方式', 'default' => 'and'])]
     private ?RewardGetType $rewardGetType = null;
 
     #[ImagePickerField]
     #[PictureColumn]
-    #[FormField]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '签到前图片'])]
     private ?string $beforePicture = null;
 
-    #[FormField]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '签到后图片'])]
     private array $afterPicture = [];
 
     #[ImagePickerField]
     #[PictureColumn]
-    #[FormField]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '签到前图标'])]
     private ?string $beforeButton = null;
 
     #[ImagePickerField]
     #[PictureColumn]
-    #[FormField]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '签到后图标'])]
     private ?string $afterButton = null;
 
-    #[FormField]
     #[ORM\Column(type: Types::TEXT, length: 255, nullable: true, options: ['comment' => '备注'])]
     private ?string $remark = null;
 
-    #[FormField]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '其他照片'])]
     private ?array $otherPicture = [];
 

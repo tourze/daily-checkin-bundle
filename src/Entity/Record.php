@@ -15,20 +15,10 @@ use Tourze\DoctrineIpBundle\Traits\IpTraceableAware;
 use Tourze\DoctrineSnowflakeBundle\Service\SnowflakeIdGenerator;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineUserBundle\Traits\BlameableAware;
-use Tourze\EasyAdmin\Attribute\Action\Creatable;
-use Tourze\EasyAdmin\Attribute\Action\Deletable;
-use Tourze\EasyAdmin\Attribute\Action\Editable;
 use Tourze\EasyAdmin\Attribute\Action\Exportable;
 use Tourze\EasyAdmin\Attribute\Column\ExportColumn;
-use Tourze\EasyAdmin\Attribute\Column\ListColumn;
-use Tourze\EasyAdmin\Attribute\Field\FormField;
 use Tourze\EasyAdmin\Attribute\Filter\Filterable;
-use Tourze\EasyAdmin\Attribute\Permission\AsPermission;
 
-#[AsPermission(title: '打卡记录')]
-#[Deletable]
-#[Editable]
-#[Creatable]
 #[Exportable]
 #[ORM\Entity(repositoryClass: RecordRepository::class)]
 #[ORM\Table(name: 'daily_checkin_record', options: ['comment' => '打卡活动记录'])]
@@ -37,8 +27,6 @@ class Record implements \Stringable, AdminArrayInterface, ApiArrayInterface
 {
     use TimestampableAware;
 
-    #[ExportColumn]
-    #[ListColumn(order: -1, sorter: true)]
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'CUSTOM')]
     #[ORM\CustomIdGenerator(SnowflakeIdGenerator::class)]
@@ -49,31 +37,23 @@ class Record implements \Stringable, AdminArrayInterface, ApiArrayInterface
     use IpTraceableAware;
 
     #[ExportColumn(title: '活动')]
-    #[FormField(title: '活动')]
     #[Filterable(label: '活动')]
-    #[ListColumn(title: '活动')]
     #[ORM\ManyToOne(targetEntity: Activity::class)]
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
     private ?Activity $activity = null;
 
     #[ExportColumn(title: '用户')]
-    #[FormField(title: '用户')]
     #[Filterable(label: '用户')]
-    #[ListColumn(title: '用户')]
     #[ORM\ManyToOne(targetEntity: UserInterface::class)]
     #[ORM\JoinColumn(onDelete: 'CASCADE')]
     private ?UserInterface $user = null;
 
     #[ExportColumn(title: '签到日期')]
-    #[FormField]
-    #[Filterable]
-    #[ListColumn]
     #[IndexColumn]
     #[ORM\Column(type: Types::DATE_IMMUTABLE, options: ['comment' => '签到日期'])]
     private ?\DateTimeInterface $checkinDate = null;
 
     #[ExportColumn(title: '用户')]
-    #[ListColumn]
     #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['comment' => '连续签到', 'dufault' => 0])]
     private ?int $checkinTimes = null;
 
@@ -86,7 +66,6 @@ class Record implements \Stringable, AdminArrayInterface, ApiArrayInterface
     #[ORM\Column(length: 100, nullable: true, options: ['comment' => '备注'])]
     private ?string $remark = null;
 
-    #[ListColumn]
     #[ORM\Column(options: ['comment' => '是否有奖', 'default' => false])]
     private ?bool $hasAward = null;
 

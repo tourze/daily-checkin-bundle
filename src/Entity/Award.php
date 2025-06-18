@@ -11,23 +11,17 @@ use Tourze\Arrayable\ApiArrayInterface;
 use Tourze\DoctrineSnowflakeBundle\Service\SnowflakeIdGenerator;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineUserBundle\Traits\BlameableAware;
-use Tourze\EasyAdmin\Attribute\Column\ExportColumn;
-use Tourze\EasyAdmin\Attribute\Column\ListColumn;
 use Tourze\EasyAdmin\Attribute\Filter\Filterable;
-use Tourze\EasyAdmin\Attribute\Permission\AsPermission;
 
 /**
  * 这里的award取的是名词的意思，有颁发之类的意思，跟Lottery那边有一点点区别
  */
-#[AsPermission(title: '签到奖励')]
 #[ORM\Entity(repositoryClass: AwardRepository::class)]
 #[ORM\Table(name: 'daily_checkin_award', options: ['comment' => '签到奖励'])]
 class Award implements ApiArrayInterface, \Stringable
 {
     use TimestampableAware;
 
-    #[ExportColumn]
-    #[ListColumn(order: -1, sorter: true)]
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'CUSTOM')]
     #[ORM\CustomIdGenerator(SnowflakeIdGenerator::class)]
@@ -37,18 +31,15 @@ class Award implements ApiArrayInterface, \Stringable
     use BlameableAware;
 
     #[Ignore]
-    #[ListColumn(title: '签到记录')]
     #[ORM\ManyToOne(targetEntity: Record::class, inversedBy: 'awards')]
     #[ORM\JoinColumn(onDelete: 'CASCADE')]
     private ?Record $record = null;
 
-    #[ListColumn(title: '奖励')]
     #[ORM\ManyToOne(targetEntity: Reward::class, inversedBy: 'awards')]
     #[ORM\JoinColumn(onDelete: 'CASCADE')]
     private ?Reward $reward = null;
 
     #[Filterable(label: '用户')]
-    #[ListColumn(title: '用户')]
     #[ORM\ManyToOne(targetEntity: UserInterface::class)]
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
     private ?UserInterface $user = null;
