@@ -2,7 +2,7 @@
 
 namespace DailyCheckinBundle\Procedure;
 
-use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use DailyCheckinBundle\Entity\Activity;
 use DailyCheckinBundle\Entity\Record;
 use DailyCheckinBundle\Enum\CheckinType;
@@ -58,7 +58,7 @@ class DoCheckin extends LockableProcedure implements LogFormatProcedure
     public function execute(): array
     {
         $result = [];
-        $now = Carbon::now();
+        $now = CarbonImmutable::now();
         $activity = $this->activityRepository->createQueryBuilder('a')
             ->where('a.id=:id AND a.startTime <= :startTime and a.endTime > :endTime')
             ->setParameter('id', $this->activityId)
@@ -72,8 +72,8 @@ class DoCheckin extends LockableProcedure implements LogFormatProcedure
         }
         /* @var Activity $activity */
 
-        $this->checkinDate = !empty($this->checkinDate) ? Carbon::parse($this->checkinDate) : $now;
-        $checkinDate = !empty($this->checkinDate) ? Carbon::parse($this->checkinDate) : $now;
+        $this->checkinDate = !empty($this->checkinDate) ? CarbonImmutable::parse($this->checkinDate) : $now;
+        $checkinDate = !empty($this->checkinDate) ? CarbonImmutable::parse($this->checkinDate) : $now;
 
         // todo 测试才允许一天签到多次
         $record = $this->recordRepository->findOneBy([
@@ -116,7 +116,7 @@ class DoCheckin extends LockableProcedure implements LogFormatProcedure
         } else {
             // 连续签到
             if (CheckinType::CONTINUE === $activity->getCheckinType()) {
-                if ($checkinDate->clone()->subDay()->format('Ymd') === $lastRecord->getCheckinDate()->format('Ymd')) {
+                if ($checkinDate->subDay()->format('Ymd') === $lastRecord->getCheckinDate()->format('Ymd')) {
                     $times = $lastRecord->getCheckinTimes() + 1;
                     $record->setCheckinTimes($times);
                 } else {

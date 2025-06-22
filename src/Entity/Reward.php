@@ -18,8 +18,6 @@ use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
 use Tourze\DoctrineSnowflakeBundle\Service\SnowflakeIdGenerator;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineUserBundle\Traits\BlameableAware;
-use Tourze\EasyAdmin\Attribute\Column\PictureColumn;
-use Tourze\EasyAdmin\Attribute\Field\ImagePickerField;
 
 #[ORM\Entity(repositoryClass: RewardRepository::class)]
 #[ORM\Table(name: 'daily_checkin_reward', options: ['comment' => '签到奖品'])]
@@ -98,21 +96,15 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
     #[ORM\Column(length: 10, enumType: RewardGetType::class, options: ['comment' => '奖品互斥方式', 'default' => 'and'])]
     private ?RewardGetType $rewardGetType = null;
 
-    #[ImagePickerField]
-    #[PictureColumn]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '签到前图片'])]
     private ?string $beforePicture = null;
 
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '签到后图片'])]
     private array $afterPicture = [];
 
-    #[ImagePickerField]
-    #[PictureColumn]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '签到前图标'])]
     private ?string $beforeButton = null;
 
-    #[ImagePickerField]
-    #[PictureColumn]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '签到后图标'])]
     private ?string $afterButton = null;
 

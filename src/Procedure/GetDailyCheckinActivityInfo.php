@@ -2,7 +2,7 @@
 
 namespace DailyCheckinBundle\Procedure;
 
-use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use DailyCheckinBundle\Entity\Record;
 use DailyCheckinBundle\Enum\CheckinType;
 use DailyCheckinBundle\Event\BeforeReturnCheckinActivityEvent;
@@ -52,7 +52,7 @@ class GetDailyCheckinActivityInfo extends BaseProcedure
         $result['accumulatedDays'] = 0;
         $result['todayHadCheckin'] = false;
 
-        $today = Carbon::now()->startOfDay();
+        $today = CarbonImmutable::now()->startOfDay();
         // 累计签到
         if (CheckinType::ACCRUED === $activity->getCheckinType()) {
             /** @var Record[] $records */
@@ -106,7 +106,7 @@ class GetDailyCheckinActivityInfo extends BaseProcedure
             }
 
             // 计算连续签到天数
-            $date = Carbon::now();
+            $date = CarbonImmutable::now();
             while (isset($result['dayRecords'][$date->format('Y-m-d')])) {
                 ++$result['accumulatedDays'];
                 $date = $date->subDay();
@@ -114,7 +114,7 @@ class GetDailyCheckinActivityInfo extends BaseProcedure
 
             // 如果今天没签，但是昨天签了，那么数据可能不对
             if (0 === $result['accumulatedDays']) {
-                $date = Carbon::yesterday();
+                $date = CarbonImmutable::yesterday();
                 while (isset($result['dayRecords'][$date->format('Y-m-d')])) {
                     ++$result['accumulatedDays'];
                     $date = $date->subDay();

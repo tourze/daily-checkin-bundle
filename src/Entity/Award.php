@@ -11,7 +11,6 @@ use Tourze\Arrayable\ApiArrayInterface;
 use Tourze\DoctrineSnowflakeBundle\Service\SnowflakeIdGenerator;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineUserBundle\Traits\BlameableAware;
-use Tourze\EasyAdmin\Attribute\Filter\Filterable;
 
 /**
  * 这里的award取的是名词的意思，有颁发之类的意思，跟Lottery那边有一点点区别
@@ -39,7 +38,6 @@ class Award implements ApiArrayInterface, \Stringable
     #[ORM\JoinColumn(onDelete: 'CASCADE')]
     private ?Reward $reward = null;
 
-    #[Filterable(label: '用户')]
     #[ORM\ManyToOne(targetEntity: UserInterface::class)]
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
     private ?UserInterface $user = null;

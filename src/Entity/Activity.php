@@ -15,13 +15,7 @@ use Tourze\DoctrineSnowflakeBundle\Service\SnowflakeIdGenerator;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineTrackBundle\Attribute\TrackColumn;
 use Tourze\DoctrineUserBundle\Traits\BlameableAware;
-use Tourze\EasyAdmin\Attribute\Action\Copyable;
-use Tourze\EasyAdmin\Attribute\Action\CurdAction;
-use Tourze\EasyAdmin\Attribute\Column\CopyColumn;
-use Tourze\EasyAdmin\Attribute\Column\PictureColumn;
-use Tourze\EasyAdmin\Attribute\Field\ImagePickerField;
 
-#[Copyable]
 #[ORM\Entity(repositoryClass: ActivityRepository::class)]
 #[ORM\Table(name: 'daily_checkin_activity', options: ['comment' => '打卡活动'])]
 class Activity implements \Stringable, ApiArrayInterface
@@ -33,8 +27,6 @@ class Activity implements \Stringable, ApiArrayInterface
     #[ORM\Column(length: 100, nullable: true, options: ['comment' => '分享标题'])]
     private ?string $shareTitle = null;
 
-    #[ImagePickerField]
-    #[PictureColumn]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '分享图片'])]
     private ?string $sharePicture = null;
 
@@ -90,31 +82,24 @@ class Activity implements \Stringable, ApiArrayInterface
     #[ORM\Column(type: Types::BOOLEAN, nullable: true, options: ['comment' => '有效', 'default' => 0])]
     private ?bool $valid = false;
 
-    #[CopyColumn]
     #[ORM\Column(type: Types::STRING, length: 100, unique: true, options: ['comment' => '标题'])]
     private string $title;
 
-    #[CopyColumn]
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, options: ['comment' => '开始时间'])]
     private ?\DateTimeInterface $startTime = null;
 
-    #[CopyColumn]
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, options: ['comment' => '结束时间'])]
     private ?\DateTimeInterface $endTime = null;
 
-    #[CopyColumn]
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => '活动周期(次)', 'default' => 1])]
     private int $times = 1;
 
     /**
      * @var Collection<Reward>
      */
-    #[CopyColumn]
-    #[CurdAction(label: '奖品', drawerWidth: '1200')]
     #[ORM\OneToMany(targetEntity: Reward::class, mappedBy: 'activity', cascade: ['persist'], orphanRemoval: true)]
     private Collection $rewards;
 
-    #[CopyColumn]
     #[ORM\Column(type: Types::STRING, length: 20, enumType: CheckinType::class, options: ['comment' => '签到类型'])]
     private ?CheckinType $checkinType = null;
 

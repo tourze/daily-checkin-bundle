@@ -2,7 +2,7 @@
 
 namespace DailyCheckinBundle\Service;
 
-use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use CreditBundle\Service\AccountService;
 use CreditBundle\Service\CurrencyService;
 use CreditBundle\Service\TransactionService;
@@ -37,7 +37,7 @@ class CheckinPrizeService
 
     public function getPrize(Activity $activity, int $times): array
     {
-        $now = Carbon::now();
+        $now = CarbonImmutable::now();
         $rewards = $this->rewardRepository->findBy([
             'activity' => $activity,
             'times' => $times,
@@ -61,8 +61,8 @@ class CheckinPrizeService
                 $count = $this->awardRepository->createQueryBuilder('a')
                     ->select('count(a.id)')
                     ->where('a.reward = :reward and a.createTime between :start and :end')
-                    ->setParameter('start', $now->clone()->startOfDay())
-                    ->setParameter('end', $now->clone()->endOfDay())
+                    ->setParameter('start', $now->startOfDay())
+                    ->setParameter('end', $now->endOfDay())
                     ->setParameter('reward', $reward)
                     ->getQuery()
                     ->getSingleScalarResult();

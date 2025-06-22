@@ -15,11 +15,7 @@ use Tourze\DoctrineIpBundle\Traits\IpTraceableAware;
 use Tourze\DoctrineSnowflakeBundle\Service\SnowflakeIdGenerator;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineUserBundle\Traits\BlameableAware;
-use Tourze\EasyAdmin\Attribute\Action\Exportable;
-use Tourze\EasyAdmin\Attribute\Column\ExportColumn;
-use Tourze\EasyAdmin\Attribute\Filter\Filterable;
 
-#[Exportable]
 #[ORM\Entity(repositoryClass: RecordRepository::class)]
 #[ORM\Table(name: 'daily_checkin_record', options: ['comment' => '打卡活动记录'])]
 #[ORM\UniqueConstraint(name: 'daily_checkin_record_idx_uniq', columns: ['user_id', 'activity_id', 'checkin_date'])]
@@ -36,24 +32,18 @@ class Record implements \Stringable, AdminArrayInterface, ApiArrayInterface
     use BlameableAware;
     use IpTraceableAware;
 
-    #[ExportColumn(title: '活动')]
-    #[Filterable(label: '活动')]
     #[ORM\ManyToOne(targetEntity: Activity::class)]
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
     private ?Activity $activity = null;
 
-    #[ExportColumn(title: '用户')]
-    #[Filterable(label: '用户')]
     #[ORM\ManyToOne(targetEntity: UserInterface::class)]
     #[ORM\JoinColumn(onDelete: 'CASCADE')]
     private ?UserInterface $user = null;
 
-    #[ExportColumn(title: '签到日期')]
     #[IndexColumn]
     #[ORM\Column(type: Types::DATE_IMMUTABLE, options: ['comment' => '签到日期'])]
     private ?\DateTimeInterface $checkinDate = null;
 
-    #[ExportColumn(title: '用户')]
     #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['comment' => '连续签到', 'dufault' => 0])]
     private ?int $checkinTimes = null;
 

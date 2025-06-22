@@ -2,7 +2,7 @@
 
 namespace DailyCheckinBundle\EventSubscriber;
 
-use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use DailyCheckinBundle\Entity\Activity;
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsEntityListener;
 use Doctrine\ORM\Events;
@@ -31,8 +31,8 @@ class ActivityListener
             return;
         }
 
-        $startTime = Carbon::parse($object->getStartTime());
-        $endTime = Carbon::parse($object->getEndTime());
+        $startTime = CarbonImmutable::parse($object->getStartTime());
+        $endTime = CarbonImmutable::parse($object->getEndTime());
         if ($startTime->greaterThan($endTime)) {
             throw new ApiException('结束时间不应该早于开始时间');
         }

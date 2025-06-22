@@ -2,7 +2,7 @@
 
 namespace DailyCheckinBundle\DataFixtures;
 
-use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use DailyCheckinBundle\Entity\Activity;
 use DailyCheckinBundle\Entity\Reward;
 use DailyCheckinBundle\Enum\CheckinType;
@@ -23,13 +23,13 @@ class BasicActivityFixture extends Fixture
     public function load(ObjectManager $manager): void
     {
         $activity = $this->activityRepository->findOneBy(['title' => '日常抽奖活动']);
-        if (!$activity) {
+        if ($activity === null) {
             $activity = new Activity();
             $activity->setTitle('日常抽奖活动');
             $activity->setValid(true);
             $activity->setCheckinType(CheckinType::CONTINUE);
-            $activity->setStartTime(Carbon::now());
-            $activity->setEndTime(Carbon::now()->subYears(10));
+            $activity->setStartTime(CarbonImmutable::now());
+            $activity->setEndTime(CarbonImmutable::now()->subYears(10));
         }
 
         $manager->persist($activity);
@@ -42,7 +42,7 @@ class BasicActivityFixture extends Fixture
                 $reward->setActivity($activity);
                 $reward->setName("奖品{$i}");
                 $reward->setType(RewardType::CREDIT);
-                $reward->setValue(10 + $i);
+                $reward->setValue((string) (10 + $i));
                 $reward->setTimes($i);
                 $manager->persist($reward);
             }
