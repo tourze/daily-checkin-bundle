@@ -27,15 +27,15 @@ use Tourze\JsonRPCLockBundle\Procedure\LockableProcedure;
 use Tourze\JsonRPCLogBundle\Attribute\Log;
 use Tourze\JsonRPCLogBundle\Procedure\LogFormatProcedure;
 
-#[MethodTag('签到模块')]
-#[MethodDoc('签到')]
-#[IsGranted('IS_AUTHENTICATED_FULLY')]
+#[MethodTag(name: '签到模块')]
+#[MethodDoc(summary: '签到')]
+#[IsGranted(attribute: 'IS_AUTHENTICATED_FULLY')]
 #[Log]
-#[MethodExpose('DoCheckin')]
-#[WithMonologChannel('procedure')]
+#[MethodExpose(method: 'DoCheckin')]
+#[WithMonologChannel(channel: 'procedure')]
 class DoCheckin extends LockableProcedure implements LogFormatProcedure
 {
-    #[MethodParam('签到活动ID')]
+    #[MethodParam(description: '签到活动ID')]
     public string $activityId;
 
     /**

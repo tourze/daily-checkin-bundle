@@ -19,13 +19,13 @@ use Tourze\JsonRPC\Core\Attribute\MethodTag;
 use Tourze\JsonRPC\Core\Exception\ApiException;
 use Tourze\JsonRPC\Core\Procedure\BaseProcedure;
 
-#[MethodDoc('获取签到活动的内容跟打卡记录')]
-#[MethodTag('签到模块')]
-#[IsGranted('IS_AUTHENTICATED_FULLY')]
-#[MethodExpose('GetDailyCheckinActivityInfo')]
+#[MethodDoc(summary: '获取签到活动的内容跟打卡记录')]
+#[MethodTag(name: '签到模块')]
+#[IsGranted(attribute: 'IS_AUTHENTICATED_FULLY')]
+#[MethodExpose(method: 'GetDailyCheckinActivityInfo')]
 class GetDailyCheckinActivityInfo extends BaseProcedure
 {
-    #[MethodParam('签到活动ID')]
+    #[MethodParam(description: '签到活动ID')]
     public string $activityId;
 
     public function __construct(

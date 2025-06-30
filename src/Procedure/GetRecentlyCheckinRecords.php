@@ -11,15 +11,15 @@ use Tourze\JsonRPC\Core\Attribute\MethodTag;
 use Tourze\JsonRPC\Core\Exception\ApiException;
 use Tourze\JsonRPC\Core\Procedure\BaseProcedure;
 
-#[MethodDoc('获取最新的签到记录')]
-#[MethodTag('签到模块')]
-#[MethodExpose('GetRecentlyCheckinRecords')]
+#[MethodDoc(summary: '获取最新的签到记录')]
+#[MethodTag(name: '签到模块')]
+#[MethodExpose(method: 'GetRecentlyCheckinRecords')]
 class GetRecentlyCheckinRecords extends BaseProcedure
 {
-    #[MethodParam('签到活动ID')]
+    #[MethodParam(description: '签到活动ID')]
     public string $activityId;
 
-    #[MethodParam('记录条数')]
+    #[MethodParam(description: '记录条数')]
     public int $nums = 4;
 
     public function __construct(

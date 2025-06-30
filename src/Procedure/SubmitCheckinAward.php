@@ -15,12 +15,12 @@ use Tourze\JsonRPC\Core\Exception\ApiException;
 use Tourze\JsonRPCLockBundle\Procedure\LockableProcedure;
 use Tourze\JsonRPCLogBundle\Attribute\Log;
 
-#[MethodTag('签到模块')]
-#[MethodDoc('提交签到奖励')]
-#[IsGranted('IS_AUTHENTICATED_FULLY')]
+#[MethodTag(name: '签到模块')]
+#[MethodDoc(summary: '提交签到奖励')]
+#[IsGranted(attribute: 'IS_AUTHENTICATED_FULLY')]
 #[Log]
-#[MethodExpose('SubmitCheckinAward')]
-#[WithMonologChannel('procedure')]
+#[MethodExpose(method: 'SubmitCheckinAward')]
+#[WithMonologChannel(channel: 'procedure')]
 class SubmitCheckinAward extends LockableProcedure
 {
     /**

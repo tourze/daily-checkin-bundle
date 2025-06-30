@@ -12,7 +12,7 @@ use Tourze\Arrayable\AdminArrayInterface;
 use Tourze\Arrayable\ApiArrayInterface;
 use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
 use Tourze\DoctrineIpBundle\Traits\IpTraceableAware;
-use Tourze\DoctrineSnowflakeBundle\Service\SnowflakeIdGenerator;
+use Tourze\DoctrineSnowflakeBundle\Traits\SnowflakeKeyAware;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 
@@ -22,12 +22,7 @@ use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 class Record implements \Stringable, AdminArrayInterface, ApiArrayInterface
 {
     use TimestampableAware;
-
-    #[ORM\Id]
-    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
-    #[ORM\CustomIdGenerator(SnowflakeIdGenerator::class)]
-    #[ORM\Column(type: Types::BIGINT, nullable: false, options: ['comment' => 'ID'])]
-    private ?string $id = null;
+    use SnowflakeKeyAware;
 
     use BlameableAware;
     use IpTraceableAware;
@@ -71,11 +66,6 @@ class Record implements \Stringable, AdminArrayInterface, ApiArrayInterface
         }
 
         return "{$this->getActivity()->getTitle()}：{$this->getActivity()->getCheckinType()->getLabel()} {$this->getCheckinTimes()}次";
-    }
-
-    public function getId(): ?string
-    {
-        return $this->id;
     }
 
 

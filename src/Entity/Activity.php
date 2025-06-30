@@ -11,7 +11,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Tourze\Arrayable\ApiArrayInterface;
 use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
-use Tourze\DoctrineSnowflakeBundle\Service\SnowflakeIdGenerator;
+use Tourze\DoctrineSnowflakeBundle\Traits\SnowflakeKeyAware;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineTrackBundle\Attribute\TrackColumn;
 use Tourze\DoctrineUserBundle\Traits\BlameableAware;
@@ -21,6 +21,7 @@ use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 class Activity implements \Stringable, ApiArrayInterface
 {
     use TimestampableAware;
+    use SnowflakeKeyAware;
     #[ORM\Column(length: 100, nullable: true, options: ['comment' => '分享路径'])]
     private ?string $sharePath = null;
 
@@ -69,12 +70,6 @@ class Activity implements \Stringable, ApiArrayInterface
         ];
     }
 
-    #[ORM\Id]
-    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
-    #[ORM\CustomIdGenerator(SnowflakeIdGenerator::class)]
-    #[ORM\Column(type: Types::BIGINT, nullable: false, options: ['comment' => 'ID'])]
-    private ?string $id = null;
-
     use BlameableAware;
 
     #[IndexColumn]
@@ -103,11 +98,11 @@ class Activity implements \Stringable, ApiArrayInterface
     #[ORM\Column(type: Types::STRING, length: 20, enumType: CheckinType::class, options: ['comment' => '签到类型'])]
     private ?CheckinType $checkinType = null;
 
-    #[Groups(['admin_curd', 'restful_read'])]
+    #[Groups(groups: ['admin_curd', 'restful_read'])]
     #[ORM\Column(length: 100, nullable: true, options: ['comment' => '朋友圈分享标题'])]
     private ?string $zoneShareTitle = null;
 
-    #[Groups(['admin_curd', 'restful_read'])]
+    #[Groups(groups: ['admin_curd', 'restful_read'])]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '朋友圈分享图片'])]
     private ?string $zoneSharePicture = null;
 
@@ -151,11 +146,6 @@ class Activity implements \Stringable, ApiArrayInterface
         }
 
         return $this->getTitle();
-    }
-
-    public function getId(): ?string
-    {
-        return $this->id;
     }
 
 

@@ -8,7 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Attribute\Ignore;
 use Tourze\Arrayable\ApiArrayInterface;
-use Tourze\DoctrineSnowflakeBundle\Service\SnowflakeIdGenerator;
+use Tourze\DoctrineSnowflakeBundle\Traits\SnowflakeKeyAware;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 
@@ -20,12 +20,7 @@ use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 class Award implements ApiArrayInterface, \Stringable
 {
     use TimestampableAware;
-
-    #[ORM\Id]
-    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
-    #[ORM\CustomIdGenerator(SnowflakeIdGenerator::class)]
-    #[ORM\Column(type: Types::BIGINT, nullable: false, options: ['comment' => 'ID'])]
-    private ?string $id = null;
+    use SnowflakeKeyAware;
 
     use BlameableAware;
 
@@ -41,11 +36,6 @@ class Award implements ApiArrayInterface, \Stringable
     #[ORM\ManyToOne(targetEntity: UserInterface::class)]
     #[ORM\JoinColumn(onDelete: 'SET NULL')]
     private ?UserInterface $user = null;
-
-    public function getId(): ?string
-    {
-        return $this->id;
-    }
 
     public function __toString(): string
     {

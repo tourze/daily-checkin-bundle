@@ -15,7 +15,7 @@ use Symfony\Component\Serializer\Attribute\Ignore;
 use Tourze\Arrayable\AdminArrayInterface;
 use Tourze\Arrayable\ApiArrayInterface;
 use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
-use Tourze\DoctrineSnowflakeBundle\Service\SnowflakeIdGenerator;
+use Tourze\DoctrineSnowflakeBundle\Traits\SnowflakeKeyAware;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 
@@ -25,6 +25,7 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
 {
     use TimestampableAware;
     use BlameableAware;
+    use SnowflakeKeyAware;
 
     #[IndexColumn]
     #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['default' => '0', 'comment' => '次序值'])]
@@ -49,11 +50,6 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         ];
     }
 
-    #[ORM\Id]
-    #[ORM\GeneratedValue(strategy: 'CUSTOM')]
-    #[ORM\CustomIdGenerator(SnowflakeIdGenerator::class)]
-    #[ORM\Column(type: Types::BIGINT, nullable: false, options: ['comment' => 'ID'])]
-    private ?string $id = null;
 
     #[ORM\Column(type: Types::STRING, length: 100, options: ['comment' => '名称'])]
     private ?string $name = null;
@@ -89,7 +85,7 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
     #[ORM\Column(type: Types::BOOLEAN, nullable: true, options: ['comment' => '兜底奖项'])]
     private ?bool $isDefault = false;
 
-    #[Groups(['restful_read'])]
+    #[Groups(groups: ['restful_read'])]
     #[ORM\Column(type: Types::BOOLEAN, options: ['comment' => '是否在奖品列表展示', 'default' => true])]
     private ?bool $canShowPrize = true;
 
@@ -126,11 +122,6 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         }
 
         return "{$this->getTimes()}. {$this->getType()->getLabel()} | {$this->getName()} : {$this->getValue()}";
-    }
-
-    public function getId(): ?string
-    {
-        return $this->id;
     }
 
     public function getName(): ?string
