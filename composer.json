@@ -30,7 +30,7 @@
     "tourze/bundle-dependency": "1.*",
     "tourze/coupon-core-bundle": "0.0.*",
     "tourze/credit-service-contracts": "self.version",
-    "tourze/doctrine-indexed-bundle": "0.0.*",
+    "tourze/doctrine-indexed-bundle": "1.0.*",
     "tourze/doctrine-ip-bundle": "0.0.*",
     "tourze/doctrine-snowflake-bundle": "0.1.*",
     "tourze/doctrine-timestamp-bundle": "0.0.*",
