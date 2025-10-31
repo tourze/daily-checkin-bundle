@@ -2,7 +2,6 @@
 
 namespace DailyCheckinBundle\Entity;
 
-use AntdCpBundle\Builder\Field\BannerSelector;
 use DailyCheckinBundle\Enum\RewardGetType;
 use DailyCheckinBundle\Enum\RewardType;
 use DailyCheckinBundle\Repository\RewardRepository;
@@ -12,6 +11,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
 use Symfony\Component\Serializer\Attribute\Ignore;
+use Symfony\Component\Validator\Constraints as Assert;
 use Tourze\Arrayable\AdminArrayInterface;
 use Tourze\Arrayable\ApiArrayInterface;
 use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
@@ -19,6 +19,10 @@ use Tourze\DoctrineSnowflakeBundle\Traits\SnowflakeKeyAware;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 
+/**
+ * @implements ApiArrayInterface<string, mixed>
+ * @implements AdminArrayInterface<string, mixed>
+ */
 #[ORM\Entity(repositoryClass: RewardRepository::class)]
 #[ORM\Table(name: 'daily_checkin_reward', options: ['comment' => '签到奖品'])]
 class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
@@ -27,6 +31,7 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
     use BlameableAware;
     use SnowflakeKeyAware;
 
+    #[Assert\PositiveOrZero]
     #[IndexColumn]
     #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['default' => '0', 'comment' => '次序值'])]
     private ?int $sortNumber = 0;
@@ -36,13 +41,14 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         return $this->sortNumber;
     }
 
-    public function setSortNumber(?int $sortNumber): self
+    public function setSortNumber(?int $sortNumber): void
     {
         $this->sortNumber = $sortNumber;
-
-        return $this;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function retrieveSortableArray(): array
     {
         return [
@@ -50,16 +56,23 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         ];
     }
 
-
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 100)]
     #[ORM\Column(type: Types::STRING, length: 100, options: ['comment' => '名称'])]
     private ?string $name = null;
 
+    #[Assert\NotNull]
+    #[Assert\Choice(callback: [RewardType::class, 'cases'])]
     #[ORM\Column(type: Types::STRING, length: 50, enumType: RewardType::class, options: ['comment' => '类型'])]
     private ?RewardType $type = null;
 
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 255)]
     #[ORM\Column(type: Types::STRING, length: 255, options: ['comment' => '奖项'])]
     private ?string $value = null;
 
+    #[Assert\NotNull]
+    #[Assert\Positive]
     #[IndexColumn]
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => '签到次数'])]
     private ?int $times = null;
@@ -70,43 +83,61 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
     private ?Activity $activity = null;
 
     /**
-     * @var Collection<Award>
+     * @var Collection<int, Award>
      */
     #[Ignore]
     #[ORM\OneToMany(mappedBy: 'reward', targetEntity: Award::class)]
     private Collection $awards;
 
+    #[Assert\PositiveOrZero]
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => '总数量'])]
     private ?int $quantity = 0;
 
+    #[Assert\PositiveOrZero]
     #[ORM\Column(nullable: true, options: ['default' => '0', 'comment' => '每日数量'])]
     private ?int $dayLimit = 0;
 
+    #[Assert\Type(type: 'bool')]
     #[ORM\Column(type: Types::BOOLEAN, nullable: true, options: ['comment' => '兜底奖项'])]
     private ?bool $isDefault = false;
 
+    #[Assert\NotNull]
+    #[Assert\Type(type: 'bool')]
     #[Groups(groups: ['restful_read'])]
     #[ORM\Column(type: Types::BOOLEAN, options: ['comment' => '是否在奖品列表展示', 'default' => true])]
     private ?bool $canShowPrize = true;
 
+    #[Assert\Choice(callback: [RewardGetType::class, 'cases'])]
     #[ORM\Column(length: 10, enumType: RewardGetType::class, options: ['comment' => '奖品互斥方式', 'default' => 'and'])]
     private ?RewardGetType $rewardGetType = null;
 
+    #[Assert\Length(max: 255)]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '签到前图片'])]
     private ?string $beforePicture = null;
 
+    /**
+     * @var array<mixed>|null
+     */
+    #[Assert\Type(type: 'array')]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '签到后图片'])]
-    private array $afterPicture = [];
+    private ?array $afterPicture = [];
 
+    #[Assert\Length(max: 255)]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '签到前图标'])]
     private ?string $beforeButton = null;
 
+    #[Assert\Length(max: 255)]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '签到后图标'])]
     private ?string $afterButton = null;
 
+    #[Assert\Length(max: 255)]
     #[ORM\Column(type: Types::TEXT, length: 255, nullable: true, options: ['comment' => '备注'])]
     private ?string $remark = null;
 
+    /**
+     * @var array<mixed>|null
+     */
+    #[Assert\Type(type: 'array')]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '其他照片'])]
     private ?array $otherPicture = [];
 
@@ -115,13 +146,18 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         $this->awards = new ArrayCollection();
     }
 
-    public function __toString()
+    public function __toString(): string
     {
-        if (empty($this->getId())) {
+        if (null === $this->getId()) {
             return '';
         }
 
-        return "{$this->getTimes()}. {$this->getType()->getLabel()} | {$this->getName()} : {$this->getValue()}";
+        $type = $this->getType();
+        if (null === $type) {
+            return "{$this->getTimes()}. {$this->getName()} : {$this->getValue()}";
+        }
+
+        return "{$this->getTimes()}. {$type->getLabel()} | {$this->getName()} : {$this->getValue()}";
     }
 
     public function getName(): ?string
@@ -129,11 +165,9 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         return $this->name;
     }
 
-    public function setName(string $name): self
+    public function setName(?string $name): void
     {
         $this->name = $name;
-
-        return $this;
     }
 
     public function getValue(): ?string
@@ -141,11 +175,9 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         return $this->value;
     }
 
-    public function setValue(string $value): self
+    public function setValue(?string $value): void
     {
         $this->value = $value;
-
-        return $this;
     }
 
     public function getType(): ?RewardType
@@ -153,11 +185,9 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         return $this->type;
     }
 
-    public function setType(RewardType $type): self
+    public function setType(?RewardType $type): void
     {
         $this->type = $type;
-
-        return $this;
     }
 
     public function getRemark(): ?string
@@ -165,11 +195,9 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         return $this->remark;
     }
 
-    public function setRemark(?string $remark): self
+    public function setRemark(?string $remark): void
     {
         $this->remark = $remark;
-
-        return $this;
     }
 
     public function getActivity(): ?Activity
@@ -177,11 +205,9 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         return $this->activity;
     }
 
-    public function setActivity(?Activity $activity): self
+    public function setActivity(?Activity $activity): void
     {
         $this->activity = $activity;
-
-        return $this;
     }
 
     /**
@@ -192,17 +218,15 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         return $this->awards;
     }
 
-    public function addAward(Award $award): self
+    public function addAward(Award $award): void
     {
         if (!$this->awards->contains($award)) {
-            $this->awards[] = $award;
+            $this->awards->add($award);
             $award->setReward($this);
         }
-
-        return $this;
     }
 
-    public function removeAward(Award $award): self
+    public function removeAward(Award $award): void
     {
         if ($this->awards->removeElement($award)) {
             // set the owning side to null (unless already changed)
@@ -210,8 +234,6 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
                 $award->setReward(null);
             }
         }
-
-        return $this;
     }
 
     public function getTimes(): ?int
@@ -219,11 +241,9 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         return $this->times;
     }
 
-    public function setTimes(?int $times): self
+    public function setTimes(?int $times): void
     {
         $this->times = $times;
-
-        return $this;
     }
 
     public function getBeforePicture(): ?string
@@ -231,23 +251,25 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         return $this->beforePicture;
     }
 
-    public function setBeforePicture(?string $beforePicture): static
+    public function setBeforePicture(?string $beforePicture): void
     {
         $this->beforePicture = $beforePicture;
-
-        return $this;
     }
 
-    public function getAfterPicture(): array
+    /**
+     * @return array<mixed>|null
+     */
+    public function getAfterPicture(): ?array
     {
         return $this->afterPicture;
     }
 
-    public function setAfterPicture(array $afterPicture): static
+    /**
+     * @param array<mixed> $afterPicture
+     */
+    public function setAfterPicture(?array $afterPicture): void
     {
         $this->afterPicture = $afterPicture;
-
-        return $this;
     }
 
     public function getBeforeButton(): ?string
@@ -255,11 +277,9 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         return $this->beforeButton;
     }
 
-    public function setBeforeButton(string $beforeButton): static
+    public function setBeforeButton(?string $beforeButton): void
     {
         $this->beforeButton = $beforeButton;
-
-        return $this;
     }
 
     public function getAfterButton(): ?string
@@ -267,13 +287,14 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         return $this->afterButton;
     }
 
-    public function setAfterButton(?string $afterButton): static
+    public function setAfterButton(?string $afterButton): void
     {
         $this->afterButton = $afterButton;
-
-        return $this;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function retrieveApiArray(): array
     {
         return [
@@ -296,6 +317,9 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function retrieveAdminArray(): array
     {
         return [
@@ -366,22 +390,24 @@ class Reward implements \Stringable, ApiArrayInterface, AdminArrayInterface
         return $this->rewardGetType;
     }
 
-    public function setRewardGetType(RewardGetType $rewardGetType): static
+    public function setRewardGetType(?RewardGetType $rewardGetType): void
     {
         $this->rewardGetType = $rewardGetType;
-
-        return $this;
     }
 
+    /**
+     * @return array<mixed>|null
+     */
     public function getOtherPicture(): ?array
     {
         return $this->otherPicture;
     }
 
-    public function setOtherPicture(?array $otherPicture): static
+    /**
+     * @param array<mixed>|null $otherPicture
+     */
+    public function setOtherPicture(?array $otherPicture): void
     {
         $this->otherPicture = $otherPicture;
-
-        return $this;
     }
 }

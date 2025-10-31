@@ -6,23 +6,52 @@ use DailyCheckinBundle\Entity\Award;
 use DailyCheckinBundle\Entity\Record;
 use DailyCheckinBundle\Entity\Reward;
 use DailyCheckinBundle\Enum\RewardType;
-use PHPUnit\Framework\TestCase;
-use Symfony\Component\Security\Core\User\UserInterface;
+use PHPUnit\Framework\Attributes\CoversClass;
+use Symfony\Component\Security\Core\User\InMemoryUser;
+use Tourze\PHPUnitDoctrineEntity\AbstractEntityTestCase;
 
-class AwardTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(Award::class)]
+final class AwardTest extends AbstractEntityTestCase
 {
     private Award $award;
 
     protected function setUp(): void
     {
+        parent::setUp();
+
         $this->award = new Award();
+    }
+
+    protected function createEntity(): Award
+    {
+        return new Award();
+    }
+
+    /**
+     * @return iterable<string, array{string, mixed}>
+     */
+    public static function propertiesProvider(): iterable
+    {
+        $record = new Record();
+        $record->setCheckinDate(new \DateTime());
+
+        $reward = new Reward();
+        $reward->setName('测试奖品');
+        $reward->setType(RewardType::CREDIT);
+        $reward->setValue('100');
+
+        yield 'record' => ['record', $record];
+        yield 'reward' => ['reward', $reward];
     }
 
     public function testGetSetRecord(): void
     {
         $record = new Record();
         $record->setCheckinDate(new \DateTime());
-        
+
         $this->award->setRecord($record);
         $this->assertSame($record, $this->award->getRecord());
     }
@@ -33,15 +62,15 @@ class AwardTest extends TestCase
         $reward->setName('测试奖品');
         $reward->setType(RewardType::CREDIT);
         $reward->setValue('100');
-        
+
         $this->award->setReward($reward);
         $this->assertSame($reward, $this->award->getReward());
     }
 
     public function testGetSetUser(): void
     {
-        $user = $this->createMock(UserInterface::class);
-        
+        $user = new InMemoryUser('test@example.com', null);
+
         $this->award->setUser($user);
         $this->assertSame($user, $this->award->getUser());
     }

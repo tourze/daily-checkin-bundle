@@ -2,6 +2,8 @@
 
 namespace DailyCheckinBundle\Procedure;
 
+use DailyCheckinBundle\Entity\Activity;
+use DailyCheckinBundle\Entity\Record;
 use DailyCheckinBundle\Repository\ActivityRepository;
 use DailyCheckinBundle\Repository\RecordRepository;
 use Tourze\JsonRPC\Core\Attribute\MethodDoc;
@@ -28,24 +30,26 @@ class GetRecentlyCheckinRecords extends BaseProcedure
     ) {
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function execute(): array
     {
         $activity = $this->activityRepository->findOneBy([
             'id' => $this->activityId,
         ]);
-        if (empty($activity)) {
+        if (!$activity instanceof Activity) {
             throw new ApiException('暂无活动');
         }
 
-        $records = $this->recordRepository->findBy([
-            'activity' => $activity,
-        ], ['id' => 'DESC'], $this->nums);
+        $records = $this->recordRepository->findRecentRecordsWithJoins($activity, $this->nums);
 
+        /** @var array<Record> $records */
         $list = [];
         foreach ($records as $record) {
             $list[] = $record->retrieveApiArray();
         }
 
-        return $list;
+        return ['data' => $list];
     }
 }

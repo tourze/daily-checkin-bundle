@@ -3,31 +3,85 @@
 namespace DailyCheckinBundle\Tests\Controller\Admin;
 
 use DailyCheckinBundle\Controller\Admin\DailyCheckinActivityCrudController;
-use DailyCheckinBundle\Entity\Activity;
-use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Tourze\PHPUnitSymfonyWebTest\AbstractEasyAdminControllerTestCase;
 
-class DailyCheckinActivityCrudControllerTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(DailyCheckinActivityCrudController::class)]
+#[RunTestsInSeparateProcesses]
+final class DailyCheckinActivityCrudControllerTest extends AbstractEasyAdminControllerTestCase
 {
-    private DailyCheckinActivityCrudController $controller;
-
-    protected function setUp(): void
+    protected function getControllerService(): DailyCheckinActivityCrudController
     {
-        $this->controller = new DailyCheckinActivityCrudController();
+        return self::getService(DailyCheckinActivityCrudController::class);
     }
 
-    public function testControllerInstantiation(): void
+    protected function getControllerServiceWithType(): DailyCheckinActivityCrudController
     {
-        $this->assertInstanceOf(DailyCheckinActivityCrudController::class, $this->controller);
+        return self::getService(DailyCheckinActivityCrudController::class);
     }
 
-    public function testExtendsAbstractCrudController(): void
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function provideIndexPageHeaders(): iterable
     {
-        $this->assertInstanceOf(AbstractCrudController::class, $this->controller);
+        yield 'ID' => ['ID'];
+        yield '标题' => ['标题'];
+        yield '是否启用此活动' => ['是否启用此活动'];
+        yield '开始时间' => ['开始时间'];
+        yield '结束时间' => ['结束时间'];
+        yield '签到次数' => ['签到次数'];
+        yield '签到类型' => ['签到类型'];
     }
 
-    public function testGetEntityFqcn(): void
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function provideNewPageFields(): iterable
     {
-        $this->assertSame(Activity::class, $this->controller::getEntityFqcn());
+        yield 'title' => ['title'];
+        yield 'valid' => ['valid'];
+        yield 'startTime' => ['startTime'];
+        yield 'endTime' => ['endTime'];
+        yield 'times' => ['times'];
+        yield 'checkinType' => ['checkinType'];
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function provideEditPageFields(): iterable
+    {
+        yield 'title' => ['title'];
+        yield 'valid' => ['valid'];
+        yield 'startTime' => ['startTime'];
+        yield 'endTime' => ['endTime'];
+        yield 'times' => ['times'];
+        yield 'checkinType' => ['checkinType'];
+    }
+
+    protected function onSetUp(): void
+    {
+        // Setup for EasyAdmin controller tests
+    }
+
+    public function testControllerInstanceCreation(): void
+    {
+        $controller = new DailyCheckinActivityCrudController();
+        $this->assertSame('DailyCheckinBundle\Entity\Activity', $controller::getEntityFqcn());
+    }
+
+    public function testBasicAdminAccessWorks(): void
+    {
+        $client = self::createClientWithDatabase();
+        $this->loginAsAdmin($client);
+
+        // Test basic admin access works
+        $client->request('GET', '/admin');
+        $this->assertTrue($client->getResponse()->isSuccessful());
     }
 }

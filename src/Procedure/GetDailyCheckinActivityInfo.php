@@ -3,12 +3,12 @@
 namespace DailyCheckinBundle\Procedure;
 
 use Carbon\CarbonImmutable;
+use DailyCheckinBundle\Entity\Activity;
 use DailyCheckinBundle\Entity\Record;
 use DailyCheckinBundle\Enum\CheckinType;
 use DailyCheckinBundle\Event\BeforeReturnCheckinActivityEvent;
 use DailyCheckinBundle\Repository\ActivityRepository;
 use DailyCheckinBundle\Repository\RecordRepository;
-use Doctrine\Common\Collections\Criteria;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
@@ -36,92 +36,244 @@ class GetDailyCheckinActivityInfo extends BaseProcedure
     ) {
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function execute(): array
     {
-        $result = [];
+        $activity = $this->getActivity();
+        $result = [
+            'activity' => $activity->retrieveApiArray(),
+            'accumulatedDays' => 0,
+            'todayHadCheckin' => false,
+        ];
+
+        if (CheckinType::ACCRUED === $activity->getCheckinType()) {
+            $result = $this->processAccruedCheckin($activity, $result);
+        }
+
+        if (CheckinType::CONTINUE === $activity->getCheckinType()) {
+            $result = $this->processContinuousCheckin($activity, $result);
+        }
+
+        return $this->dispatchEvent($result);
+    }
+
+    private function getActivity(): Activity
+    {
         $activity = $this->activityRepository->findOneBy([
             'id' => $this->activityId,
         ]);
-        if (empty($activity)) {
+
+        if (!$activity instanceof Activity) {
             throw new ApiException('暂无活动');
         }
 
-        $result['activity'] = $activity->retrieveApiArray();
+        return $activity;
+    }
 
-        // 签到情况
-        $result['accumulatedDays'] = 0;
-        $result['todayHadCheckin'] = false;
+    /**
+     * @param array<string, mixed> $result
+     * @return array<string, mixed>
+     */
+    private function processAccruedCheckin(Activity $activity, array $result): array
+    {
+        $records = $this->getAccruedRecords($activity);
+        $result['record'] = [];
 
-        $today = CarbonImmutable::now()->startOfDay();
-        // 累计签到
-        if (CheckinType::ACCRUED === $activity->getCheckinType()) {
-            /** @var Record[] $records */
-            $records = $this->recordRepository->createQueryBuilder('c')
-                ->where('c.user = :user and c.activity = :activity')
-                ->setParameter('user', $this->security->getUser())
-                ->setParameter('activity', $activity)
-                ->orderBy('c.id', Criteria::DESC)
-                ->getQuery()
-                ->getResult();
-
-            $result['record'] = [];
-            if (!empty($records)) {
-                $times = $activity->getTimes();
-                $maxCheckinTimes = $records[0]->getCheckinTimes();
-                for ($i = 1; $i <= $times; ++$i) {
-                    $key = $maxCheckinTimes - $i;
-                    if ($key < 0) {
-                        $result['record'][$i] = [];
-                    } else {
-                        $result['record'][$i] = $records[$key]->getCheckinDate();
-                        ++$result['accumulatedDays'];
-                        if ($today->equalTo($records[$key]->getCheckinDate())) {
-                            $result['todayHadCheckin'] = true;
-                        }
-                    }
-                }
-            }
-
-            $result['record'] = array_values($result['record']);
+        if ([] !== $records) {
+            $result = $this->buildAccruedRecordData($records, $activity, $result);
         }
 
-        // 连续签到
-        if (CheckinType::CONTINUE === $activity->getCheckinType()) {
-            $records = $this->recordRepository->createQueryBuilder('c')
-                ->where('c.user = :user AND c.activity = :activity')
-                ->setParameter('user', $this->security->getUser())
-                ->setParameter('activity', $activity)
-                ->setMaxResults($activity->getTimes())
-                ->orderBy('c.id', Criteria::DESC)
-                ->getQuery()
-                ->toIterable();
+        /** @var array<string, mixed> $record */
+        $record = $result['record'] ?? [];
+        $result['record'] = array_values($record);
 
-            $result['dayRecords'] = [];
-            foreach ($records as $record) {
-                /* @var Record $record */
-                $result['dayRecords'][$record->getCheckinDate()->format('Y-m-d')] = $record->retrieveApiArray();
-                if ($today->equalTo($record->getCheckinDate())) {
+        return $result;
+    }
+
+    /**
+     * @return array<int, Record>
+     */
+    private function getAccruedRecords(Activity $activity): array
+    {
+        $result = $this->recordRepository->createQueryBuilder('c')
+            ->where('c.user = :user and c.activity = :activity')
+            ->setParameter('user', $this->security->getUser())
+            ->setParameter('activity', $activity)
+            ->orderBy('c.id', 'DESC')
+            ->getQuery()
+            ->getResult()
+        ;
+
+        assert(is_array($result));
+        /** @var array<int, Record> $result */
+
+        return $result;
+    }
+
+    /**
+     * @param array<Record> $records
+     * @param array<string, mixed> $result
+     * @return array<string, mixed>
+     */
+    private function buildAccruedRecordData(array $records, Activity $activity, array $result): array
+    {
+        $today = CarbonImmutable::now()->startOfDay();
+        $times = $activity->getTimes();
+        $maxCheckinTimes = $this->getMaxCheckinTimes($records);
+
+        for ($i = 1; $i <= $times; ++$i) {
+            $key = $maxCheckinTimes - $i;
+            $result = $this->processAccruedRecord($records, $key, $i, $today, $result);
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<Record> $records
+     */
+    private function getMaxCheckinTimes(array $records): int
+    {
+        if ([] === $records) {
+            return 0;
+        }
+
+        $checkinTimes = $records[0]->getCheckinTimes();
+
+        return $checkinTimes ?? 0;
+    }
+
+    /**
+     * @param array<Record> $records
+     * @param array<string, mixed> $result
+     * @return array<string, mixed>
+     */
+    private function processAccruedRecord(array $records, int $key, int $i, CarbonImmutable $today, array $result): array
+    {
+        // 初始化record数组如果不存在
+        if (!isset($result['record']) || !is_array($result['record'])) {
+            $result['record'] = [];
+        }
+
+        /** @var array<int, mixed> $recordArray */
+        $recordArray = $result['record'];
+
+        if ($key < 0 || !isset($records[$key])) {
+            $recordArray[$i] = [];
+            $result['record'] = $recordArray;
+
+            return $result;
+        }
+
+        $record = $records[$key];
+        $recordArray[$i] = $record->getCheckinDate();
+        $result['record'] = $recordArray;
+
+        // 安全地处理 accumulatedDays
+        $accumulatedDays = $result['accumulatedDays'] ?? 0;
+        if (is_int($accumulatedDays)) {
+            $result['accumulatedDays'] = $accumulatedDays + 1;
+        }
+
+        $checkinDate = $record->getCheckinDate();
+        if ($this->isCheckinToday($checkinDate, $today)) {
+            $result['todayHadCheckin'] = true;
+        }
+
+        return $result;
+    }
+
+    private function isCheckinToday(?\DateTimeInterface $checkinDate, CarbonImmutable $today): bool
+    {
+        if (null === $checkinDate) {
+            return false;
+        }
+
+        $recordDate = CarbonImmutable::instance($checkinDate)->startOfDay();
+
+        return $today->equalTo($recordDate);
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     * @return array<string, mixed>
+     */
+    private function processContinuousCheckin(Activity $activity, array $result): array
+    {
+        $records = $this->getContinuousRecords($activity);
+        $result['dayRecords'] = [];
+        $today = CarbonImmutable::now()->startOfDay();
+
+        foreach ($records as $record) {
+            assert($record instanceof Record);
+            $checkinDate = $record->getCheckinDate();
+            if (null !== $checkinDate) {
+                $result['dayRecords'][$checkinDate->format('Y-m-d')] = $record->retrieveApiArray();
+                $recordDate = CarbonImmutable::instance($checkinDate)->startOfDay();
+                if ($today->equalTo($recordDate)) {
                     $result['todayHadCheckin'] = true;
                 }
             }
+        }
 
-            // 计算连续签到天数
-            $date = CarbonImmutable::now();
-            while (isset($result['dayRecords'][$date->format('Y-m-d')])) {
-                ++$result['accumulatedDays'];
+        $result['accumulatedDays'] = $this->calculateContinuousDays($result['dayRecords']);
+
+        return $result;
+    }
+
+    /**
+     * @return iterable<Record>
+     */
+    private function getContinuousRecords(Activity $activity): iterable
+    {
+        $result = $this->recordRepository->createQueryBuilder('c')
+            ->where('c.user = :user AND c.activity = :activity')
+            ->setParameter('user', $this->security->getUser())
+            ->setParameter('activity', $activity)
+            ->setMaxResults($activity->getTimes())
+            ->orderBy('c.id', 'DESC')
+            ->getQuery()
+            ->toIterable()
+        ;
+
+        /** @var iterable<Record> $result */
+        return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $dayRecords
+     */
+    private function calculateContinuousDays(array $dayRecords): int
+    {
+        $accumulatedDays = 0;
+
+        // 从今天开始计算连续天数
+        $date = CarbonImmutable::now();
+        while (isset($dayRecords[$date->format('Y-m-d')])) {
+            ++$accumulatedDays;
+            $date = $date->subDay();
+        }
+
+        // 如果今天没签但昨天签了，从昨天开始计算
+        if (0 === $accumulatedDays) {
+            $date = CarbonImmutable::yesterday();
+            while (isset($dayRecords[$date->format('Y-m-d')])) {
+                ++$accumulatedDays;
                 $date = $date->subDay();
-            }
-
-            // 如果今天没签，但是昨天签了，那么数据可能不对
-            if (0 === $result['accumulatedDays']) {
-                $date = CarbonImmutable::yesterday();
-                while (isset($result['dayRecords'][$date->format('Y-m-d')])) {
-                    ++$result['accumulatedDays'];
-                    $date = $date->subDay();
-                }
             }
         }
 
+        return $accumulatedDays;
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     * @return array<string, mixed>
+     */
+    private function dispatchEvent(array $result): array
+    {
         $event = new BeforeReturnCheckinActivityEvent();
         $event->setResult($result);
         $this->eventDispatcher->dispatch($event);

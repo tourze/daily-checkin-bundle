@@ -5,12 +5,12 @@ namespace DailyCheckinBundle\Procedure;
 use Carbon\CarbonImmutable;
 use DailyCheckinBundle\Entity\Activity;
 use DailyCheckinBundle\Entity\Record;
+use DailyCheckinBundle\Entity\Reward;
 use DailyCheckinBundle\Enum\CheckinType;
 use DailyCheckinBundle\Event\AfterCheckinEvent;
 use DailyCheckinBundle\Repository\ActivityRepository;
 use DailyCheckinBundle\Repository\RecordRepository;
 use DailyCheckinBundle\Service\CheckinPrizeService;
-use Doctrine\Common\Collections\Criteria;
 use Doctrine\ORM\EntityManagerInterface;
 use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
@@ -54,11 +54,39 @@ class DoCheckin extends LockableProcedure implements LogFormatProcedure
     ) {
     }
 
-    // todo 暂没考虑连续签到的情况(补签)
+    /**
+     * @return array<string, mixed>
+     */
     public function execute(): array
     {
-        $result = [];
         $now = CarbonImmutable::now();
+        $activity = $this->getActiveActivity($now);
+        $checkinDate = $this->getCheckinDate($now);
+
+        // 检查今日是否已签到
+        $existingRecord = $this->checkExistingCheckin($activity, $checkinDate);
+        if (null !== $existingRecord) {
+            return $this->createAlreadyCheckedInResponse($existingRecord);
+        }
+
+        // 创建新的签到记录
+        $record = $this->createCheckinRecord($activity, $checkinDate);
+
+        // 计算签到次数
+        $this->calculateCheckinTimes($record, $activity, $checkinDate);
+
+        // 保存签到记录
+        $this->saveCheckinRecord($record);
+
+        // 处理奖励
+        $result = $this->processPrizes($activity, $record);
+
+        // 触发事件
+        return $this->dispatchAfterCheckinEvent($record, $result);
+    }
+
+    private function getActiveActivity(CarbonImmutable $now): Activity
+    {
         $activity = $this->activityRepository->createQueryBuilder('a')
             ->where('a.id=:id AND a.startTime <= :startTime and a.endTime > :endTime')
             ->setParameter('id', $this->activityId)
@@ -66,73 +94,118 @@ class DoCheckin extends LockableProcedure implements LogFormatProcedure
             ->setParameter('startTime', $now)
             ->setMaxResults(1)
             ->getQuery()
-            ->getOneOrNullResult();
-        if (empty($activity)) {
+            ->getOneOrNullResult()
+        ;
+
+        if (!$activity instanceof Activity) {
             throw new ApiException('暂无活动');
         }
-        /* @var Activity $activity */
 
-        $this->checkinDate = !empty($this->checkinDate) ? CarbonImmutable::parse($this->checkinDate) : $now;
-        $checkinDate = !empty($this->checkinDate) ? CarbonImmutable::parse($this->checkinDate) : $now;
+        return $activity;
+    }
 
-        // todo 测试才允许一天签到多次
+    private function getCheckinDate(CarbonImmutable $now): CarbonImmutable
+    {
+        return '' !== $this->checkinDate ? CarbonImmutable::parse($this->checkinDate) : $now;
+    }
+
+    private function checkExistingCheckin(Activity $activity, CarbonImmutable $checkinDate): ?Record
+    {
         $record = $this->recordRepository->findOneBy([
             'user' => $this->security->getUser(),
             'activity' => $activity,
             'checkinDate' => $checkinDate,
         ]);
-        if ($record !== null) {
-            return [
-                'id' => $record->getId(),
-                '__showToast' => [
-                    'title' => '今日已签到',
-                    'icon' => 'fail',
-                ],
-                'times' => $record->getCheckinTimes(),
-                'award' => '',
-            ];
-        }
 
+        return $record instanceof Record ? $record : null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function createAlreadyCheckedInResponse(Record $record): array
+    {
+        return [
+            'id' => $record->getId(),
+            '__showToast' => [
+                'title' => '今日已签到',
+                'icon' => 'fail',
+            ],
+            'times' => $record->getCheckinTimes(),
+            'award' => '',
+        ];
+    }
+
+    private function createCheckinRecord(Activity $activity, CarbonImmutable $checkinDate): Record
+    {
         $record = new Record();
         $record->setUser($this->security->getUser());
         $record->setActivity($activity);
         $record->setCheckinDate($checkinDate);
         $record->setHasAward(false);
 
-        // 查最近一次签到记录的签到次数
-        /** @var Record|null $lastRecord */
-        $lastRecord = $this->recordRepository
+        return $record;
+    }
+
+    private function calculateCheckinTimes(Record $record, Activity $activity, CarbonImmutable $checkinDate): void
+    {
+        $lastRecord = $this->getLastCheckinRecord($activity);
+
+        if (null === $lastRecord || $lastRecord->getCheckinTimes() >= $activity->getTimes()) {
+            $record->setCheckinTimes(1);
+
+            return;
+        }
+
+        $times = $this->calculateTimesBasedOnCheckinType($activity, $lastRecord, $checkinDate);
+        $record->setCheckinTimes($times);
+    }
+
+    private function getLastCheckinRecord(Activity $activity): ?Record
+    {
+        $record = $this->recordRepository
             ->createQueryBuilder('a')
             ->where('a.activity = :activity and a.user = :user')
             ->setParameter('activity', $activity)
             ->setParameter('user', $this->security->getUser())
             ->setMaxResults(1)
-            ->orderBy('a.checkinDate', Criteria::DESC)
+            ->orderBy('a.checkinDate', 'DESC')
             ->getQuery()
-            ->getOneOrNullResult();
+            ->getOneOrNullResult()
+        ;
 
-        if ($lastRecord === null || $lastRecord->getCheckinTimes() >= $activity->getTimes()) {
-            $record->setCheckinTimes(1);
-        } else {
-            // 连续签到
-            if (CheckinType::CONTINUE === $activity->getCheckinType()) {
-                if ($checkinDate->subDay()->format('Ymd') === $lastRecord->getCheckinDate()->format('Ymd')) {
-                    $times = $lastRecord->getCheckinTimes() + 1;
-                    $record->setCheckinTimes($times);
-                } else {
-                    // 从第一天重新开始
-                    $record->setCheckinTimes(1);
-                }
-            }
+        return $record instanceof Record ? $record : null;
+    }
 
-            // 累计签到
-            if (CheckinType::ACCRUED === $activity->getCheckinType()) {
-                $times = $lastRecord->getCheckinTimes() + 1;
-                $record->setCheckinTimes($times);
-            }
+    private function calculateTimesBasedOnCheckinType(Activity $activity, Record $lastRecord, CarbonImmutable $checkinDate): int
+    {
+        if (CheckinType::CONTINUE === $activity->getCheckinType()) {
+            return $this->calculateContinuousTimes($lastRecord, $checkinDate);
         }
 
-        // 保存签到记录
+        if (CheckinType::ACCRUED === $activity->getCheckinType()) {
+            $times = $lastRecord->getCheckinTimes();
+
+            return null !== $times ? $times + 1 : 1;
+        }
+
+        return 1;
+    }
+
+    private function calculateContinuousTimes(Record $lastRecord, CarbonImmutable $checkinDate): int
+    {
+        $lastCheckinDate = $lastRecord->getCheckinDate();
+        if (null !== $lastCheckinDate && $checkinDate->subDay()->format('Ymd') === $lastCheckinDate->format('Ymd')) {
+            $times = $lastRecord->getCheckinTimes();
+
+            return null !== $times ? $times + 1 : 1;
+        }
+
+        return 1; // 从第一天重新开始
+    }
+
+    private function saveCheckinRecord(Record $record): void
+    {
         try {
             $this->entityManager->persist($record);
             $this->entityManager->flush();
@@ -143,26 +216,49 @@ class DoCheckin extends LockableProcedure implements LogFormatProcedure
             ]);
             throw new ApiException('签到时发生未知异常，请稍后重试', previous: $exception);
         }
+    }
 
-        $result['hasAward'] = false;
+    /**
+     * @return array<string, mixed>
+     */
+    private function processPrizes(Activity $activity, Record $record): array
+    {
+        $result = ['hasAward' => false];
 
-        $prizeRes = $this->checkinPrizeService->getPrize($activity, $record->getCheckinTimes());
+        $checkinTimes = $record->getCheckinTimes();
+        /** @var array<string, mixed> $prizeRes */
+        $prizeRes = $this->checkinPrizeService->getPrize($activity, (int) $checkinTimes);
         $this->logger->info('签到应得奖励', [
             'prizeRes' => $prizeRes,
         ]);
+
         $result = array_merge($result, $prizeRes);
-        if (!empty($result['andPrizes'])) {
+
+        if (isset($result['andPrizes']) && is_array($result['andPrizes'])) {
             foreach ($result['andPrizes'] as $andPrize) {
-                $this->checkinPrizeService->sendPrize($andPrize, $record);
+                if ($andPrize instanceof Reward) {
+                    $this->checkinPrizeService->sendPrize($andPrize, $record);
+                }
             }
         }
 
-        $record->setHasAward($result['hasAward']);
+        $record->setHasAward((bool) $result['hasAward']);
         $this->entityManager->persist($record);
         $this->entityManager->flush();
-        $result['record'] = $record->retrieveApiArray();
-        $result['choseReward'] = $record->hasAward() && $record->getAwards()->isEmpty();
 
+        $result['record'] = $record->retrieveApiArray();
+        $hasAward = $record->hasAward();
+        $result['choseReward'] = (bool) $hasAward && $record->getAwards()->isEmpty();
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, mixed> $result
+     * @return array<string, mixed>
+     */
+    private function dispatchAfterCheckinEvent(Record $record, array $result): array
+    {
         $event = new AfterCheckinEvent();
         $event->setRecord($record);
         $event->setResult($result);

@@ -4,15 +4,15 @@ services:
     autowire: true      # Automatically injects dependencies in your services.
     autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
 
-  DailyCheckinBundle\:
-    resource: '../../'
-    exclude:
-      - '../../DependencyInjection/'
-      - '../../Enum/'
-      - '../../Entity/'
-      - '../../Message/'
-      - '../../Model/'
-      - '../../Exception/'
-      - '../../Resources/'
-      - '../../Tests/'
+  DailyCheckinBundle\Controller\:
+    resource: '../../Controller/'
+  DailyCheckinBundle\EventSubscriber\:
+    resource: '../../EventSubscriber/'
+  DailyCheckinBundle\Procedure\:
+    resource: '../../Procedure/'
+  DailyCheckinBundle\Repository\:
+    resource: '../../Repository/'
+  DailyCheckinBundle\Service\:
+    resource: '../../Service/'
+  DailyCheckinBundle\AdminMenu: ~
 

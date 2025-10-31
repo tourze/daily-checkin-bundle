@@ -9,6 +9,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Serializer\Attribute\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 use Tourze\Arrayable\ApiArrayInterface;
 use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
 use Tourze\DoctrineSnowflakeBundle\Traits\SnowflakeKeyAware;
@@ -16,18 +17,26 @@ use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineTrackBundle\Attribute\TrackColumn;
 use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 
+/**
+ * @implements ApiArrayInterface<string, mixed>
+ */
 #[ORM\Entity(repositoryClass: ActivityRepository::class)]
 #[ORM\Table(name: 'daily_checkin_activity', options: ['comment' => '打卡活动'])]
 class Activity implements \Stringable, ApiArrayInterface
 {
     use TimestampableAware;
     use SnowflakeKeyAware;
+    use BlameableAware;
+
+    #[Assert\Length(max: 100)]
     #[ORM\Column(length: 100, nullable: true, options: ['comment' => '分享路径'])]
     private ?string $sharePath = null;
 
+    #[Assert\Length(max: 100)]
     #[ORM\Column(length: 100, nullable: true, options: ['comment' => '分享标题'])]
     private ?string $shareTitle = null;
 
+    #[Assert\Length(max: 255)]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '分享图片'])]
     private ?string $sharePicture = null;
 
@@ -61,6 +70,9 @@ class Activity implements \Stringable, ApiArrayInterface
         $this->sharePath = $sharePath;
     }
 
+    /**
+     * @return array<string, string|null>
+     */
     public function retrieveWechatShareFriendConfig(): array
     {
         return [
@@ -70,38 +82,45 @@ class Activity implements \Stringable, ApiArrayInterface
         ];
     }
 
-    use BlameableAware;
-
+    #[Assert\NotNull]
     #[IndexColumn]
     #[TrackColumn]
     #[ORM\Column(type: Types::BOOLEAN, nullable: true, options: ['comment' => '有效', 'default' => 0])]
     private ?bool $valid = false;
 
+    #[Assert\NotBlank]
+    #[Assert\Length(max: 100)]
     #[ORM\Column(type: Types::STRING, length: 100, unique: true, options: ['comment' => '标题'])]
     private string $title;
 
+    #[Assert\NotNull]
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, options: ['comment' => '开始时间'])]
     private ?\DateTimeInterface $startTime = null;
 
+    #[Assert\NotNull]
     #[ORM\Column(type: Types::DATETIME_IMMUTABLE, options: ['comment' => '结束时间'])]
     private ?\DateTimeInterface $endTime = null;
 
+    #[Assert\Positive]
     #[ORM\Column(type: Types::INTEGER, options: ['comment' => '活动周期(次)', 'default' => 1])]
     private int $times = 1;
 
     /**
-     * @var Collection<Reward>
+     * @var Collection<int, Reward>
      */
     #[ORM\OneToMany(targetEntity: Reward::class, mappedBy: 'activity', cascade: ['persist'], orphanRemoval: true)]
     private Collection $rewards;
 
+    #[Assert\Choice(callback: [CheckinType::class, 'cases'])]
     #[ORM\Column(type: Types::STRING, length: 20, enumType: CheckinType::class, options: ['comment' => '签到类型'])]
     private ?CheckinType $checkinType = null;
 
+    #[Assert\Length(max: 100)]
     #[Groups(groups: ['admin_curd', 'restful_read'])]
     #[ORM\Column(length: 100, nullable: true, options: ['comment' => '朋友圈分享标题'])]
     private ?string $zoneShareTitle = null;
 
+    #[Assert\Length(max: 255)]
     #[Groups(groups: ['admin_curd', 'restful_read'])]
     #[ORM\Column(length: 255, nullable: true, options: ['comment' => '朋友圈分享图片'])]
     private ?string $zoneSharePicture = null;
@@ -126,6 +145,9 @@ class Activity implements \Stringable, ApiArrayInterface
         $this->zoneSharePicture = $zoneSharePicture;
     }
 
+    /**
+     * @return array<string, string|null>
+     */
     public function retrieveWechatShareZoneConfig(): array
     {
         return [
@@ -141,24 +163,21 @@ class Activity implements \Stringable, ApiArrayInterface
 
     public function __toString(): string
     {
-        if ($this->getId() === null) {
+        if (null === $this->getId()) {
             return '';
         }
 
         return $this->getTitle();
     }
 
-
     public function isValid(): ?bool
     {
         return $this->valid;
     }
 
-    public function setValid(?bool $valid): self
+    public function setValid(?bool $valid): void
     {
         $this->valid = $valid;
-
-        return $this;
     }
 
     public function getTitle(): string
@@ -166,11 +185,9 @@ class Activity implements \Stringable, ApiArrayInterface
         return $this->title;
     }
 
-    public function setTitle(string $title): self
+    public function setTitle(string $title): void
     {
         $this->title = $title;
-
-        return $this;
     }
 
     public function getStartTime(): ?\DateTimeInterface
@@ -178,11 +195,9 @@ class Activity implements \Stringable, ApiArrayInterface
         return $this->startTime;
     }
 
-    public function setStartTime(\DateTimeInterface $startTime): self
+    public function setStartTime(\DateTimeInterface $startTime): void
     {
         $this->startTime = $startTime;
-
-        return $this;
     }
 
     public function getEndTime(): ?\DateTimeInterface
@@ -190,11 +205,9 @@ class Activity implements \Stringable, ApiArrayInterface
         return $this->endTime;
     }
 
-    public function setEndTime(\DateTimeInterface $endTime): self
+    public function setEndTime(\DateTimeInterface $endTime): void
     {
         $this->endTime = $endTime;
-
-        return $this;
     }
 
     public function getTimes(): ?int
@@ -202,11 +215,9 @@ class Activity implements \Stringable, ApiArrayInterface
         return $this->times;
     }
 
-    public function setTimes(int $times): self
+    public function setTimes(int $times): void
     {
         $this->times = $times;
-
-        return $this;
     }
 
     /**
@@ -220,7 +231,7 @@ class Activity implements \Stringable, ApiArrayInterface
     public function addReward(Reward $reward): self
     {
         if (!$this->rewards->contains($reward)) {
-            $this->rewards[] = $reward;
+            $this->rewards->add($reward);
             $reward->setActivity($this);
         }
 
@@ -244,13 +255,14 @@ class Activity implements \Stringable, ApiArrayInterface
         return $this->checkinType;
     }
 
-    public function setCheckinType(?CheckinType $checkinType): self
+    public function setCheckinType(?CheckinType $checkinType): void
     {
         $this->checkinType = $checkinType;
-
-        return $this;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function retrieveApiArray(): array
     {
         $rewards = [];
@@ -268,4 +280,5 @@ class Activity implements \Stringable, ApiArrayInterface
             'times' => $this->getTimes(),
             'rewards' => $rewards,
         ];
-    }}
+    }
+}

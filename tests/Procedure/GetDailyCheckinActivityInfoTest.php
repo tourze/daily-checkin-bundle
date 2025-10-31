@@ -2,34 +2,168 @@
 
 namespace DailyCheckinBundle\Tests\Procedure;
 
+use Carbon\CarbonImmutable;
+use DailyCheckinBundle\Entity\Activity;
+use DailyCheckinBundle\Entity\Record;
+use DailyCheckinBundle\Enum\CheckinType;
 use DailyCheckinBundle\Procedure\GetDailyCheckinActivityInfo;
-use DailyCheckinBundle\Repository\ActivityRepository;
-use DailyCheckinBundle\Repository\RecordRepository;
-use PHPUnit\Framework\TestCase;
-use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
+use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
+use Symfony\Component\Security\Core\User\UserInterface;
+use Tourze\JsonRPC\Core\Exception\ApiException;
+use Tourze\JsonRPC\Core\Tests\AbstractProcedureTestCase;
 
-class GetDailyCheckinActivityInfoTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(GetDailyCheckinActivityInfo::class)]
+#[RunTestsInSeparateProcesses]
+final class GetDailyCheckinActivityInfoTest extends AbstractProcedureTestCase
 {
     private GetDailyCheckinActivityInfo $procedure;
 
-    protected function setUp(): void
+    protected function onSetUp(): void
     {
-        $activityRepository = $this->createMock(ActivityRepository::class);
-        $recordRepository = $this->createMock(RecordRepository::class);
-        $security = $this->createMock(Security::class);
-        $eventDispatcher = $this->createMock(EventDispatcherInterface::class);
-
-        $this->procedure = new GetDailyCheckinActivityInfo(
-            $security,
-            $activityRepository,
-            $recordRepository,
-            $eventDispatcher
-        );
+        $this->procedure = self::getService(GetDailyCheckinActivityInfo::class);
     }
 
     public function testProcedureInstantiation(): void
     {
         $this->assertInstanceOf(GetDailyCheckinActivityInfo::class, $this->procedure);
+    }
+
+    public function testExecuteWithValidActivity(): void
+    {
+        $user = $this->createNormalUser();
+
+        $activity = $this->createActivity();
+        $this->persistAndFlush($activity);
+
+        $activityId = $activity->getId();
+        $this->assertNotNull($activityId, 'Activity ID should not be null after persistence');
+        $this->procedure->activityId = $activityId;
+        $result = $this->procedure->execute();
+
+        $this->assertArrayHasKey('activity', $result);
+        $this->assertArrayHasKey('accumulatedDays', $result);
+        $this->assertArrayHasKey('todayHadCheckin', $result);
+        $this->assertFalse($result['todayHadCheckin']);
+    }
+
+    public function testExecuteWithNonExistentActivity(): void
+    {
+        $user = $this->createNormalUser();
+
+        $this->procedure->activityId = 'non-existent-id';
+
+        $this->expectException(ApiException::class);
+        $this->expectExceptionMessage('暂无活动');
+
+        $this->procedure->execute();
+    }
+
+    public function testExecuteWithAccruedActivityAndRecords(): void
+    {
+        $user = $this->createNormalUser();
+        $this->persistAndFlush($user);
+
+        // 模拟用户登录状态
+        $token = new UsernamePasswordToken($user, 'main', $user->getRoles());
+        $tokenStorage = self::getService(TokenStorageInterface::class);
+        $tokenStorage->setToken($token);
+
+        $activity = $this->createActivity(CheckinType::ACCRUED);
+        $this->persistAndFlush($activity);
+
+        $record = $this->createRecord($activity, $user, CarbonImmutable::now(), 3);
+        $this->persistAndFlush($record);
+
+        $activityId = $activity->getId();
+        $this->assertNotNull($activityId, 'Activity ID should not be null after persistence');
+        $this->procedure->activityId = $activityId;
+        $result = $this->procedure->execute();
+
+        $this->assertArrayHasKey('record', $result);
+        $this->assertGreaterThan(0, $result['accumulatedDays']);
+        $this->assertTrue($result['todayHadCheckin']);
+    }
+
+    public function testExecuteWithContinuousActivityAndRecords(): void
+    {
+        $user = $this->createNormalUser();
+        $this->persistAndFlush($user);
+
+        // 模拟用户登录状态
+        $token = new UsernamePasswordToken($user, 'main', $user->getRoles());
+        $tokenStorage = self::getService(TokenStorageInterface::class);
+        $tokenStorage->setToken($token);
+
+        $activity = $this->createActivity(CheckinType::CONTINUE);
+        $this->persistAndFlush($activity);
+
+        $record = $this->createRecord($activity, $user, CarbonImmutable::now(), 1);
+        $this->persistAndFlush($record);
+
+        $activityId = $activity->getId();
+        $this->assertNotNull($activityId, 'Activity ID should not be null after persistence');
+        $this->procedure->activityId = $activityId;
+        $result = $this->procedure->execute();
+
+        $this->assertArrayHasKey('dayRecords', $result);
+        $this->assertSame(1, $result['accumulatedDays']);
+        $this->assertTrue($result['todayHadCheckin']);
+    }
+
+    public function testExecuteWithContinuousActivityNoTodayCheckin(): void
+    {
+        $user = $this->createNormalUser();
+        $this->persistAndFlush($user);
+
+        // 模拟用户登录状态
+        $token = new UsernamePasswordToken($user, 'main', $user->getRoles());
+        $tokenStorage = self::getService(TokenStorageInterface::class);
+        $tokenStorage->setToken($token);
+
+        $activity = $this->createActivity(CheckinType::CONTINUE);
+        $this->persistAndFlush($activity);
+
+        $record = $this->createRecord($activity, $user, CarbonImmutable::yesterday(), 1);
+        $this->persistAndFlush($record);
+
+        $activityId = $activity->getId();
+        $this->assertNotNull($activityId, 'Activity ID should not be null after persistence');
+        $this->procedure->activityId = $activityId;
+        $result = $this->procedure->execute();
+
+        $this->assertArrayHasKey('dayRecords', $result);
+        $this->assertSame(1, $result['accumulatedDays']);
+        $this->assertFalse($result['todayHadCheckin']);
+    }
+
+    private function createActivity(CheckinType $checkinType = CheckinType::ACCRUED): Activity
+    {
+        $activity = new Activity();
+        $activity->setTitle('测试签到活动');
+        $activity->setStartTime(CarbonImmutable::now()->subDay());
+        $activity->setEndTime(CarbonImmutable::now()->addDays(7));
+        $activity->setTimes(7);
+        $activity->setValid(true);
+        $activity->setCheckinType($checkinType);
+
+        return $activity;
+    }
+
+    private function createRecord(Activity $activity, UserInterface $user, CarbonImmutable $checkinDate, int $checkinTimes): Record
+    {
+        $record = new Record();
+        $record->setActivity($activity);
+        $record->setUser($user);
+        $record->setCheckinDate($checkinDate);
+        $record->setCheckinTimes($checkinTimes);
+        $record->setHasAward(false);
+
+        return $record;
     }
 }

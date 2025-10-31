@@ -1,22 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace DailyCheckinBundle\Tests;
 
 use DailyCheckinBundle\DailyCheckinBundle;
-use PHPUnit\Framework\TestCase;
-use Symfony\Component\HttpKernel\Bundle\Bundle;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Tourze\PHPUnitSymfonyKernelTest\AbstractBundleTestCase;
 
-class DailyCheckinBundleTest extends TestCase
+/**
+ * @internal
+ * @phpstan-ignore symplify.forbiddenExtendOfNonAbstractClass
+ */
+#[CoversClass(DailyCheckinBundle::class)]
+#[RunTestsInSeparateProcesses]
+final class DailyCheckinBundleTest extends AbstractBundleTestCase
 {
-    public function testBundleInstantiation(): void
-    {
-        $bundle = new DailyCheckinBundle();
-        $this->assertInstanceOf(Bundle::class, $bundle);
-    }
-
-    public function testBundleName(): void
-    {
-        $bundle = new DailyCheckinBundle();
-        $this->assertSame('DailyCheckinBundle', $bundle->getName());
-    }
 }

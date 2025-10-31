@@ -3,45 +3,23 @@
 namespace DailyCheckinBundle\Tests\Procedure;
 
 use DailyCheckinBundle\Procedure\DoCheckin;
-use DailyCheckinBundle\Repository\ActivityRepository;
-use DailyCheckinBundle\Repository\RecordRepository;
-use DailyCheckinBundle\Service\CheckinPrizeService;
-use Doctrine\ORM\EntityManagerInterface;
-use PHPUnit\Framework\TestCase;
-use Psr\Log\LoggerInterface;
-use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Tourze\JsonRPC\Core\Model\JsonRpcRequest;
+use Tourze\JsonRPC\Core\Tests\AbstractProcedureTestCase;
 
-class DoCheckinTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(DoCheckin::class)]
+#[RunTestsInSeparateProcesses]
+final class DoCheckinTest extends AbstractProcedureTestCase
 {
     private DoCheckin $procedure;
-    private ActivityRepository $activityRepository;
-    private RecordRepository $recordRepository;
-    private CheckinPrizeService $checkinPrizeService;
-    private EntityManagerInterface $entityManager;
-    private Security $security;
-    private EventDispatcherInterface $eventDispatcher;
-    private LoggerInterface $logger;
 
-    protected function setUp(): void
+    protected function onSetUp(): void
     {
-        $this->activityRepository = $this->createMock(ActivityRepository::class);
-        $this->recordRepository = $this->createMock(RecordRepository::class);
-        $this->checkinPrizeService = $this->createMock(CheckinPrizeService::class);
-        $this->entityManager = $this->createMock(EntityManagerInterface::class);
-        $this->security = $this->createMock(Security::class);
-        $this->eventDispatcher = $this->createMock(EventDispatcherInterface::class);
-        $this->logger = $this->createMock(LoggerInterface::class);
-
-        $this->procedure = new DoCheckin(
-            $this->activityRepository,
-            $this->recordRepository,
-            $this->checkinPrizeService,
-            $this->security,
-            $this->logger,
-            $this->eventDispatcher,
-            $this->entityManager
-        );
+        $this->procedure = self::getService(DoCheckin::class);
     }
 
     public function testProcedureInstantiation(): void
@@ -53,5 +31,27 @@ class DoCheckinTest extends TestCase
     {
         $this->assertInstanceOf('Tourze\JsonRPCLockBundle\Procedure\LockableProcedure', $this->procedure);
         $this->assertInstanceOf('Tourze\JsonRPCLogBundle\Procedure\LogFormatProcedure', $this->procedure);
+    }
+
+    public function testGenerateFormattedLogText(): void
+    {
+        $request = new JsonRpcRequest();
+        $result = $this->procedure->generateFormattedLogText($request);
+        $this->assertSame('打卡签到', $result);
+    }
+
+    public function testExecuteMethodIsCallable(): void
+    {
+        // 验证 execute 方法为 public 可调用
+        $reflection = new \ReflectionMethod($this->procedure, 'execute');
+        $this->assertTrue($reflection->isPublic());
+    }
+
+    public function testActivityIdPropertyCanBeSet(): void
+    {
+        $testActivityId = 'test-activity-id-' . uniqid();
+        $this->procedure->activityId = $testActivityId;
+
+        $this->assertSame($testActivityId, $this->procedure->activityId);
     }
 }

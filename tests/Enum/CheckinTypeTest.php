@@ -3,9 +3,14 @@
 namespace DailyCheckinBundle\Tests\Enum;
 
 use DailyCheckinBundle\Enum\CheckinType;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use Tourze\PHPUnitEnum\AbstractEnumTestCase;
 
-class CheckinTypeTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(CheckinType::class)]
+final class CheckinTypeTest extends AbstractEnumTestCase
 {
     public function testEnumValues(): void
     {
@@ -29,10 +34,13 @@ class CheckinTypeTest extends TestCase
 
     public function testTraitsAreUsed(): void
     {
-        $reflection = new \ReflectionClass(CheckinType::class);
-        $traits = $reflection->getTraitNames();
-        
-        $this->assertContains('Tourze\EnumExtra\ItemTrait', $traits);
-        $this->assertContains('Tourze\EnumExtra\SelectTrait', $traits);
+        $this->assertIsArray(CheckinType::CONTINUE->toArray());
+        $this->assertIsArray(CheckinType::CONTINUE->toSelectItem());
+    }
+
+    public function testToArray(): void
+    {
+        $this->assertSame(['value' => 'continue', 'label' => '连续签到'], CheckinType::CONTINUE->toArray());
+        $this->assertSame(['value' => 'accrued', 'label' => '累计签到'], CheckinType::ACCRUED->toArray());
     }
 }

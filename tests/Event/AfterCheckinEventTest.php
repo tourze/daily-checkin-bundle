@@ -5,21 +5,28 @@ namespace DailyCheckinBundle\Tests\Event;
 use DailyCheckinBundle\Entity\Award;
 use DailyCheckinBundle\Entity\Record;
 use DailyCheckinBundle\Event\AfterCheckinEvent;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use Tourze\PHPUnitSymfonyUnitTest\AbstractEventTestCase;
 
-class AfterCheckinEventTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(AfterCheckinEvent::class)]
+final class AfterCheckinEventTest extends AbstractEventTestCase
 {
     private AfterCheckinEvent $event;
 
     protected function setUp(): void
     {
+        parent::setUp();
+
         $this->event = new AfterCheckinEvent();
     }
 
     public function testGetSetResult(): void
     {
         $result = ['status' => 'success', 'message' => 'Checkin completed'];
-        
+
         $this->event->setResult($result);
         $this->assertSame($result, $this->event->getResult());
     }
@@ -28,7 +35,7 @@ class AfterCheckinEventTest extends TestCase
     {
         $record = new Record();
         $record->setCheckinDate(new \DateTime());
-        
+
         $this->event->setRecord($record);
         $this->assertSame($record, $this->event->getRecord());
     }
@@ -43,7 +50,7 @@ class AfterCheckinEventTest extends TestCase
     public function testAwardCanBeNull(): void
     {
         $this->assertNull($this->event->getAward());
-        
+
         $this->event->setAward(null);
         $this->assertNull($this->event->getAward());
     }

@@ -2,6 +2,8 @@
 
 namespace DailyCheckinBundle\Procedure;
 
+use DailyCheckinBundle\Entity\Activity;
+use DailyCheckinBundle\Entity\Record;
 use DailyCheckinBundle\Repository\ActivityRepository;
 use DailyCheckinBundle\Repository\RecordRepository;
 use DailyCheckinBundle\Service\CheckinPrizeService;
@@ -31,31 +33,114 @@ class GetUserCheckinRecords extends BaseProcedure
     ) {
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function execute(): array
+    {
+        $activity = $this->getActivity();
+        $records = $this->getRecords($activity);
+        $list = $this->processRecords($records);
+
+        return [
+            'data' => $list,
+        ];
+    }
+
+    private function getActivity(): Activity
     {
         $activity = $this->activityRepository->findOneBy([
             'id' => $this->activityId,
         ]);
-        if (empty($activity)) {
+
+        if (!$activity instanceof Activity) {
             throw new ApiException('暂无活动');
         }
 
-        $records = $this->recordRepository->findBy([
-            'activity' => $activity,
-            'user' => $this->security->getUser(),
-        ], ['id' => 'DESC']);
+        return $activity;
+    }
 
+    /**
+     * @return array<Record>
+     */
+    private function getRecords(Activity $activity): array
+    {
+        return $this->recordRepository->findByActivityAndUserWithJoins(
+            $activity,
+            $this->security->getUser()
+        );
+    }
+
+    /**
+     * @param array<Record> $records
+     * @return array<array<string, mixed>>
+     */
+    private function processRecords(array $records): array
+    {
         $list = [];
         foreach ($records as $record) {
-            $tmp = $record->retrieveApiArray();
-            if ($record->hasAward() && $record->getAwards()->isEmpty()) {
-                $res = $this->checkinPrizeService->getPrize($record->getActivity(), $record->getCheckinTimes());
-                $tmp['orPrizes'] = $res['orPrizes'];
-            }
-            $tmp['choseReward'] = $record->hasAward() && $record->getAwards()->isEmpty();
-            $list[] = $tmp;
+            $recordData = $this->processRecord($record);
+            $list[] = $recordData;
         }
 
         return $list;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function processRecord(Record $record): array
+    {
+        $tmp = $record->retrieveApiArray();
+
+        if ($this->shouldAddOrPrizes($record)) {
+            $orPrizes = $this->getOrPrizes($record);
+            if (null !== $orPrizes) {
+                $tmp['orPrizes'] = $orPrizes;
+            }
+        }
+
+        $tmp['choseReward'] = $this->shouldChooseReward($record);
+
+        return $tmp;
+    }
+
+    private function shouldAddOrPrizes(Record $record): bool
+    {
+        $hasAward = $record->hasAward();
+
+        return (true === $hasAward) && $record->getAwards()->isEmpty();
+    }
+
+    private function shouldChooseReward(Record $record): bool
+    {
+        $hasAward = $record->hasAward();
+
+        return (true === $hasAward) && $record->getAwards()->isEmpty();
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function getOrPrizes(Record $record): ?array
+    {
+        $activity = $record->getActivity();
+        $checkinTimes = $record->getCheckinTimes();
+
+        if (null === $activity || null === $checkinTimes) {
+            return null;
+        }
+
+        $res = $this->checkinPrizeService->getPrize($activity, $checkinTimes);
+
+        $orPrizes = $res['orPrizes'] ?? null;
+
+        // 确保返回类型符合声明：array<string, mixed>|null
+        if (is_array($orPrizes)) {
+            /** @var array<string, mixed> $orPrizes */
+            return $orPrizes;
+        }
+
+        return null;
     }
 }

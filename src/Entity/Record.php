@@ -8,6 +8,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Validator\Constraints as Assert;
 use Tourze\Arrayable\AdminArrayInterface;
 use Tourze\Arrayable\ApiArrayInterface;
 use Tourze\DoctrineIndexedBundle\Attribute\IndexColumn;
@@ -16,6 +17,10 @@ use Tourze\DoctrineSnowflakeBundle\Traits\SnowflakeKeyAware;
 use Tourze\DoctrineTimestampBundle\Traits\TimestampableAware;
 use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 
+/**
+ * @implements AdminArrayInterface<string, mixed>
+ * @implements ApiArrayInterface<string, mixed>
+ */
 #[ORM\Entity(repositoryClass: RecordRepository::class)]
 #[ORM\Table(name: 'daily_checkin_record', options: ['comment' => '打卡活动记录'])]
 #[ORM\UniqueConstraint(name: 'daily_checkin_record_idx_uniq', columns: ['user_id', 'activity_id', 'checkin_date'])]
@@ -23,7 +28,6 @@ class Record implements \Stringable, AdminArrayInterface, ApiArrayInterface
 {
     use TimestampableAware;
     use SnowflakeKeyAware;
-
     use BlameableAware;
     use IpTraceableAware;
 
@@ -35,22 +39,26 @@ class Record implements \Stringable, AdminArrayInterface, ApiArrayInterface
     #[ORM\JoinColumn(onDelete: 'CASCADE')]
     private ?UserInterface $user = null;
 
+    #[Assert\NotNull]
     #[IndexColumn]
     #[ORM\Column(type: Types::DATE_IMMUTABLE, options: ['comment' => '签到日期'])]
     private ?\DateTimeInterface $checkinDate = null;
 
-    #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['comment' => '连续签到', 'dufault' => 0])]
+    #[Assert\PositiveOrZero]
+    #[ORM\Column(type: Types::INTEGER, nullable: true, options: ['comment' => '连续签到', 'default' => 0])]
     private ?int $checkinTimes = null;
 
     /**
-     * @var Collection<Award>
+     * @var Collection<int, Award>
      */
     #[ORM\OneToMany(mappedBy: 'record', targetEntity: Award::class)]
     private Collection $awards;
 
+    #[Assert\Length(max: 100)]
     #[ORM\Column(length: 100, nullable: true, options: ['comment' => '备注'])]
     private ?string $remark = null;
 
+    #[Assert\NotNull]
     #[ORM\Column(options: ['comment' => '是否有奖', 'default' => false])]
     private ?bool $hasAward = null;
 
@@ -59,26 +67,33 @@ class Record implements \Stringable, AdminArrayInterface, ApiArrayInterface
         $this->awards = new ArrayCollection();
     }
 
-    public function __toString()
+    public function __toString(): string
     {
-        if (empty($this->getId())) {
+        if (null === $this->getId()) {
             return '';
         }
 
-        return "{$this->getActivity()->getTitle()}：{$this->getActivity()->getCheckinType()->getLabel()} {$this->getCheckinTimes()}次";
-    }
+        $activity = $this->getActivity();
+        if (null === $activity) {
+            return '';
+        }
 
+        $checkinType = $activity->getCheckinType();
+        if (null === $checkinType) {
+            return $activity->getTitle();
+        }
+
+        return "{$activity->getTitle()}：{$checkinType->getLabel()} {$this->getCheckinTimes()}次";
+    }
 
     public function getActivity(): ?Activity
     {
         return $this->activity;
     }
 
-    public function setActivity(?Activity $activity): self
+    public function setActivity(?Activity $activity): void
     {
         $this->activity = $activity;
-
-        return $this;
     }
 
     public function getUser(): ?UserInterface
@@ -86,11 +101,9 @@ class Record implements \Stringable, AdminArrayInterface, ApiArrayInterface
         return $this->user;
     }
 
-    public function setUser(?UserInterface $user): self
+    public function setUser(?UserInterface $user): void
     {
         $this->user = $user;
-
-        return $this;
     }
 
     public function getCheckinDate(): ?\DateTimeInterface
@@ -98,11 +111,9 @@ class Record implements \Stringable, AdminArrayInterface, ApiArrayInterface
         return $this->checkinDate;
     }
 
-    public function setCheckinDate(\DateTimeInterface $checkinDate): self
+    public function setCheckinDate(\DateTimeInterface $checkinDate): void
     {
         $this->checkinDate = $checkinDate;
-
-        return $this;
     }
 
     public function getCheckinTimes(): ?int
@@ -110,11 +121,9 @@ class Record implements \Stringable, AdminArrayInterface, ApiArrayInterface
         return $this->checkinTimes;
     }
 
-    public function setCheckinTimes(?int $checkinTimes): self
+    public function setCheckinTimes(?int $checkinTimes): void
     {
         $this->checkinTimes = $checkinTimes;
-
-        return $this;
     }
 
     /**
@@ -125,17 +134,15 @@ class Record implements \Stringable, AdminArrayInterface, ApiArrayInterface
         return $this->awards;
     }
 
-    public function addAward(Award $award): self
+    public function addAward(Award $award): void
     {
         if (!$this->awards->contains($award)) {
-            $this->awards[] = $award;
+            $this->awards->add($award);
             $award->setRecord($this);
         }
-
-        return $this;
     }
 
-    public function removeAward(Award $award): self
+    public function removeAward(Award $award): void
     {
         if ($this->awards->removeElement($award)) {
             // set the owning side to null (unless already changed)
@@ -143,8 +150,6 @@ class Record implements \Stringable, AdminArrayInterface, ApiArrayInterface
                 $award->setRecord(null);
             }
         }
-
-        return $this;
     }
 
     public function getRemark(): ?string
@@ -152,13 +157,14 @@ class Record implements \Stringable, AdminArrayInterface, ApiArrayInterface
         return $this->remark;
     }
 
-    public function setRemark(?string $remark): self
+    public function setRemark(?string $remark): void
     {
         $this->remark = $remark;
-
-        return $this;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function retrieveAdminArray(): array
     {
         return [
@@ -171,6 +177,9 @@ class Record implements \Stringable, AdminArrayInterface, ApiArrayInterface
         ];
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function retrieveApiArray(): array
     {
         $awards = [];
@@ -194,10 +203,8 @@ class Record implements \Stringable, AdminArrayInterface, ApiArrayInterface
         return $this->hasAward;
     }
 
-    public function setHasAward(bool $hasAward): static
+    public function setHasAward(bool $hasAward): void
     {
         $this->hasAward = $hasAward;
-
-        return $this;
     }
 }

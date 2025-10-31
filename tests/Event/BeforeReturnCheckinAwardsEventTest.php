@@ -3,22 +3,29 @@
 namespace DailyCheckinBundle\Tests\Event;
 
 use DailyCheckinBundle\Event\BeforeReturnCheckinAwardsEvent;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Tourze\PHPUnitSymfonyUnitTest\AbstractEventTestCase;
 
-class BeforeReturnCheckinAwardsEventTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(BeforeReturnCheckinAwardsEvent::class)]
+final class BeforeReturnCheckinAwardsEventTest extends AbstractEventTestCase
 {
     private BeforeReturnCheckinAwardsEvent $event;
 
     protected function setUp(): void
     {
+        parent::setUp();
+
         $this->event = new BeforeReturnCheckinAwardsEvent();
     }
 
     public function testGetSetResult(): void
     {
         $result = ['status' => 'success', 'awards' => []];
-        
+
         $this->event->setResult($result);
         $this->assertSame($result, $this->event->getResult());
     }
@@ -26,7 +33,7 @@ class BeforeReturnCheckinAwardsEventTest extends TestCase
     public function testGetSetUser(): void
     {
         $user = $this->createMock(UserInterface::class);
-        
+
         $this->event->setUser($user);
         $this->assertSame($user, $this->event->getUser());
     }
@@ -34,7 +41,7 @@ class BeforeReturnCheckinAwardsEventTest extends TestCase
     public function testUserCanBeNull(): void
     {
         $this->assertNull($this->event->getUser());
-        
+
         $this->event->setUser(null);
         $this->assertNull($this->event->getUser());
     }

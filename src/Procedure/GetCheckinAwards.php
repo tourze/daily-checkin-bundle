@@ -3,6 +3,7 @@
 namespace DailyCheckinBundle\Procedure;
 
 use DailyCheckinBundle\Entity\Award;
+use DailyCheckinBundle\Entity\Record;
 use DailyCheckinBundle\Event\BeforeReturnCheckinAwardsEvent;
 use DailyCheckinBundle\Repository\ActivityRepository;
 use DailyCheckinBundle\Repository\RecordRepository;
@@ -38,20 +39,24 @@ class GetCheckinAwards extends BaseProcedure
         $activity = $this->activityRepository->findOneBy([
             'id' => $this->activityId,
         ]);
-        if (empty($activity)) {
+        if (null === $activity) {
             throw new ApiException('暂无活动');
         }
 
+        /** @var array<Record> $records */
         $records = $this->recordRepository->findBy([
             'activity' => $activity,
             'user' => $this->security->getUser(),
         ], ['id' => 'DESC']);
 
+        /** @var array<string, mixed> $list */
         $list = [];
         foreach ($records as $record) {
+            $awards = $record->getAwards();
             /** @var Award $award */
-            foreach ($record->getAwards() as $award) {
-                if (!$award->getReward()->getCanShowPrize()) {
+            foreach ($awards as $award) {
+                $reward = $award->getReward();
+                if (null === $reward || (true !== $reward->getCanShowPrize())) {
                     continue;
                 }
                 $list[] = $award->retrieveApiArray();
@@ -59,7 +64,9 @@ class GetCheckinAwards extends BaseProcedure
         }
 
         $event = new BeforeReturnCheckinAwardsEvent();
-        $event->setResult($list);
+        /** @var array<string, mixed> $finalList */
+        $finalList = $list;
+        $event->setResult($finalList);
         $event->setUser($this->security->getUser());
         $this->eventDispatcher->dispatch($event);
 

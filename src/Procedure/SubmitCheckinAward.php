@@ -2,6 +2,8 @@
 
 namespace DailyCheckinBundle\Procedure;
 
+use DailyCheckinBundle\Entity\Record;
+use DailyCheckinBundle\Entity\Reward;
 use DailyCheckinBundle\Repository\RecordRepository;
 use DailyCheckinBundle\Repository\RewardRepository;
 use DailyCheckinBundle\Service\CheckinPrizeService;
@@ -41,13 +43,16 @@ class SubmitCheckinAward extends LockableProcedure
     ) {
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function execute(): array
     {
         $record = $this->recordRepository->find($this->recordId);
-        if (empty($record)) {
+        if (!$record instanceof Record) {
             throw new ApiException('签到记录不存在');
         }
-        if (!$record->hasAward()) {
+        if (true !== $record->hasAward()) {
             $this->logger->error('签到记录未获得奖品', [
                 'record' => $record->retrieveApiArray(),
             ]);
@@ -62,13 +67,22 @@ class SubmitCheckinAward extends LockableProcedure
         }
 
         $reward = $this->rewardRepository->find($this->rewardId);
-        if (empty($reward)) {
+        if (!$reward instanceof Reward) {
             throw new ApiException('奖励不存在');
         }
 
-        $getReward = $this->checkinPrizeService->getPrize($record->getActivity(), $record->getCheckinTimes());
-        $rewardIds = array_column($getReward['orPrizes'], 'id');
-        if (!in_array($this->rewardId, $rewardIds)) {
+        $activity = $record->getActivity();
+        $checkinTimes = $record->getCheckinTimes();
+        if (null === $activity || null === $checkinTimes) {
+            throw new ApiException('签到信息不完整');
+        }
+        $getReward = $this->checkinPrizeService->getPrize($activity, $checkinTimes);
+        $orPrizes = $getReward['orPrizes'] ?? [];
+        if (!is_array($orPrizes)) {
+            throw new ApiException('奖品数据格式错误');
+        }
+        $rewardIds = array_column($orPrizes, 'id');
+        if (!in_array($this->rewardId, $rewardIds, true)) {
             throw new ApiException('无法获得该奖品');
         }
 

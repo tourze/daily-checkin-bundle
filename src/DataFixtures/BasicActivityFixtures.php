@@ -6,12 +6,18 @@ use Carbon\CarbonImmutable;
 use DailyCheckinBundle\Entity\Activity;
 use DailyCheckinBundle\Entity\Reward;
 use DailyCheckinBundle\Enum\CheckinType;
+use DailyCheckinBundle\Enum\RewardGetType;
 use DailyCheckinBundle\Enum\RewardType;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
+use Symfony\Component\DependencyInjection\Attribute\When;
 
-class BasicActivityFixture extends Fixture
+#[When(env: 'test')]
+#[When(env: 'dev')]
+class BasicActivityFixtures extends Fixture
 {
+    public const DAILY_CHECKIN_ACTIVITY = 'daily-checkin-activity';
+
     public function load(ObjectManager $manager): void
     {
         $activity = new Activity();
@@ -19,7 +25,7 @@ class BasicActivityFixture extends Fixture
         $activity->setValid(true);
         $activity->setCheckinType(CheckinType::CONTINUE);
         $activity->setStartTime(CarbonImmutable::now());
-        $activity->setEndTime(CarbonImmutable::now()->subYears(10));
+        $activity->setEndTime(CarbonImmutable::now()->addYears(10));
 
         $manager->persist($activity);
 
@@ -31,11 +37,12 @@ class BasicActivityFixture extends Fixture
             $reward->setType(RewardType::CREDIT);
             $reward->setValue((string) (10 + $i));
             $reward->setTimes($i);
+            $reward->setRewardGetType(RewardGetType::OR);
             $manager->persist($reward);
         }
 
         $manager->flush();
 
-        $this->addReference('daily-checkin-activity', $activity);
+        $this->addReference(self::DAILY_CHECKIN_ACTIVITY, $activity);
     }
 }

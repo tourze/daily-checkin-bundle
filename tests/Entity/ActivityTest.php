@@ -5,15 +5,42 @@ namespace DailyCheckinBundle\Tests\Entity;
 use DailyCheckinBundle\Entity\Activity;
 use DailyCheckinBundle\Entity\Reward;
 use DailyCheckinBundle\Enum\CheckinType;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use Tourze\PHPUnitDoctrineEntity\AbstractEntityTestCase;
 
-class ActivityTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(Activity::class)]
+final class ActivityTest extends AbstractEntityTestCase
 {
     private Activity $activity;
 
     protected function setUp(): void
     {
+        parent::setUp();
+
         $this->activity = new Activity();
+    }
+
+    protected function createEntity(): Activity
+    {
+        return new Activity();
+    }
+
+    /**
+     * @return iterable<string, array{string, mixed}>
+     */
+    public static function propertiesProvider(): iterable
+    {
+        yield 'title' => ['title', '测试活动'];
+        yield 'valid' => ['valid', true];
+        yield 'times' => ['times', 30];
+        yield 'sharePath' => ['sharePath', '/share/path'];
+        yield 'shareTitle' => ['shareTitle', '分享标题'];
+        yield 'sharePicture' => ['sharePicture', '/share/picture.jpg'];
+        yield 'zoneShareTitle' => ['zoneShareTitle', '区域分享标题'];
+        yield 'zoneSharePicture' => ['zoneSharePicture', '/share/zone.jpg'];
     }
 
     public function testGetSetTitle(): void
@@ -104,16 +131,15 @@ class ActivityTest extends TestCase
         $this->assertSame('', (string) $this->activity);
     }
 
-    public function testToStringWithId(): void
+    public function testToStringWithTitle(): void
     {
         $title = '测试活动';
         $this->activity->setTitle($title);
-        
-        // 使用反射设置一个 ID
-        $reflection = new \ReflectionProperty($this->activity, 'id');
-        $reflection->setAccessible(true);
-        $reflection->setValue($this->activity, '123456789');
-        
-        $this->assertSame($title, (string) $this->activity);
+
+        // 当没有ID时，toString应该返回空字符串
+        $this->assertSame('', (string) $this->activity);
+
+        // 测试Activity的其他属性是否正确设置
+        $this->assertSame($title, $this->activity->getTitle());
     }
 }

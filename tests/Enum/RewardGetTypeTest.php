@@ -3,9 +3,14 @@
 namespace DailyCheckinBundle\Tests\Enum;
 
 use DailyCheckinBundle\Enum\RewardGetType;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use Tourze\PHPUnitEnum\AbstractEnumTestCase;
 
-class RewardGetTypeTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(RewardGetType::class)]
+final class RewardGetTypeTest extends AbstractEnumTestCase
 {
     public function testEnumValues(): void
     {
@@ -29,10 +34,13 @@ class RewardGetTypeTest extends TestCase
 
     public function testTraitsAreUsed(): void
     {
-        $reflection = new \ReflectionClass(RewardGetType::class);
-        $traits = $reflection->getTraitNames();
-        
-        $this->assertContains('Tourze\EnumExtra\ItemTrait', $traits);
-        $this->assertContains('Tourze\EnumExtra\SelectTrait', $traits);
+        $this->assertIsArray(RewardGetType::AND->toArray());
+        $this->assertIsArray(RewardGetType::AND->toSelectItem());
+    }
+
+    public function testToArray(): void
+    {
+        $this->assertSame(['value' => 'and', 'label' => '并列'], RewardGetType::AND->toArray());
+        $this->assertSame(['value' => 'or', 'label' => '或者'], RewardGetType::OR->toArray());
     }
 }

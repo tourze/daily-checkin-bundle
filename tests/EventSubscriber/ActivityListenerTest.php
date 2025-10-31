@@ -5,17 +5,24 @@ namespace DailyCheckinBundle\Tests\EventSubscriber;
 use Carbon\CarbonImmutable;
 use DailyCheckinBundle\Entity\Activity;
 use DailyCheckinBundle\EventSubscriber\ActivityListener;
-use PHPUnit\Framework\TestCase;
-use Tourze\JsonRPC\Core\Exception\ApiException;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use Tourze\PHPUnitSymfonyKernelTest\AbstractIntegrationTestCase;
 
-class ActivityListenerTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(ActivityListener::class)]
+#[RunTestsInSeparateProcesses]
+final class ActivityListenerTest extends AbstractIntegrationTestCase
 {
     private ActivityListener $listener;
+
     private Activity $activity;
 
-    protected function setUp(): void
+    protected function onSetUp(): void
     {
-        $this->listener = new ActivityListener();
+        $this->listener = self::getService(ActivityListener::class);
         $this->activity = new Activity();
     }
 
@@ -28,26 +35,38 @@ class ActivityListenerTest extends TestCase
     {
         $startTime = CarbonImmutable::now();
         $endTime = CarbonImmutable::now()->addDays(30);
-        
+
         $this->activity->setStartTime($startTime);
         $this->activity->setEndTime($endTime);
-        
-        // 不应抛出异常
+
+        // 验证活动的开始和结束时间设置正确
+        $this->assertSame($startTime, $this->activity->getStartTime());
+        $this->assertSame($endTime, $this->activity->getEndTime());
+
+        // 调用监听器方法不应抛出异常
         $this->listener->prePersist($this->activity);
-        $this->assertTrue(true); // 如果没有异常则测试通过
+
+        // 验证时间仍然有效
+        $this->assertLessThan($this->activity->getEndTime(), $this->activity->getStartTime());
     }
 
     public function testPreUpdateWithValidDates(): void
     {
         $startTime = CarbonImmutable::now();
         $endTime = CarbonImmutable::now()->addDays(30);
-        
+
         $this->activity->setStartTime($startTime);
         $this->activity->setEndTime($endTime);
-        
-        // 不应抛出异常
+
+        // 验证活动的开始和结束时间设置正确
+        $this->assertSame($startTime, $this->activity->getStartTime());
+        $this->assertSame($endTime, $this->activity->getEndTime());
+
+        // 调用监听器方法不应抛出异常
         $this->listener->preUpdate($this->activity);
-        $this->assertTrue(true); // 如果没有异常则测试通过
+
+        // 验证时间仍然有效
+        $this->assertLessThan($this->activity->getEndTime(), $this->activity->getStartTime());
     }
 
     public function testListenerCanHandleValidation(): void
@@ -58,14 +77,14 @@ class ActivityListenerTest extends TestCase
 
     public function testEnsureDateValidWithEndTimeBeforeStartTime(): void
     {
-        $this->expectException(ApiException::class);
-        
+        $this->expectException(\InvalidArgumentException::class);
+
         $startTime = CarbonImmutable::now();
         $endTime = CarbonImmutable::now()->subDays(1); // 结束时间在开始时间之前
-        
+
         $this->activity->setStartTime($startTime);
         $this->activity->setEndTime($endTime);
-        
+
         $this->listener->ensureDateValid($this->activity);
     }
 }

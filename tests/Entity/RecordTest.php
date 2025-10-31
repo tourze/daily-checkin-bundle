@@ -5,23 +5,46 @@ namespace DailyCheckinBundle\Tests\Entity;
 use DailyCheckinBundle\Entity\Activity;
 use DailyCheckinBundle\Entity\Award;
 use DailyCheckinBundle\Entity\Record;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Tourze\PHPUnitDoctrineEntity\AbstractEntityTestCase;
 
-class RecordTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(Record::class)]
+final class RecordTest extends AbstractEntityTestCase
 {
     private Record $record;
 
     protected function setUp(): void
     {
+        parent::setUp();
+
         $this->record = new Record();
+    }
+
+    protected function createEntity(): Record
+    {
+        return new Record();
+    }
+
+    /**
+     * @return iterable<string, array{string, mixed}>
+     */
+    public static function propertiesProvider(): iterable
+    {
+        yield 'checkinDate' => ['checkinDate', new \DateTime()];
+        yield 'checkinTimes' => ['checkinTimes', 5];
+        yield 'remark' => ['remark', '测试备注'];
+        // hasAward的getter方法是hasAward()，不是getHasAward()，跳过这个测试
     }
 
     public function testGetSetActivity(): void
     {
         $activity = new Activity();
         $activity->setTitle('测试活动');
-        
+
         $this->record->setActivity($activity);
         $this->assertSame($activity, $this->record->getActivity());
     }
@@ -29,7 +52,7 @@ class RecordTest extends TestCase
     public function testGetSetUser(): void
     {
         $user = $this->createMock(UserInterface::class);
-        
+
         $this->record->setUser($user);
         $this->assertSame($user, $this->record->getUser());
     }

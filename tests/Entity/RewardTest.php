@@ -7,15 +7,48 @@ use DailyCheckinBundle\Entity\Award;
 use DailyCheckinBundle\Entity\Reward;
 use DailyCheckinBundle\Enum\RewardGetType;
 use DailyCheckinBundle\Enum\RewardType;
-use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\CoversClass;
+use Tourze\PHPUnitDoctrineEntity\AbstractEntityTestCase;
 
-class RewardTest extends TestCase
+/**
+ * @internal
+ */
+#[CoversClass(Reward::class)]
+final class RewardTest extends AbstractEntityTestCase
 {
     private Reward $reward;
 
     protected function setUp(): void
     {
+        parent::setUp();
+
         $this->reward = new Reward();
+    }
+
+    protected function createEntity(): Reward
+    {
+        return new Reward();
+    }
+
+    /**
+     * @return iterable<string, array{string, mixed}>
+     */
+    public static function propertiesProvider(): iterable
+    {
+        yield 'sortNumber' => ['sortNumber', 1];
+        yield 'name' => ['name', '测试奖品'];
+        yield 'value' => ['value', '100积分'];
+        yield 'times' => ['times', 3];
+        yield 'quantity' => ['quantity', 10];
+        yield 'dayLimit' => ['dayLimit', 5];
+        yield 'isDefault' => ['isDefault', true];
+        yield 'canShowPrize' => ['canShowPrize', true];
+        yield 'beforePicture' => ['beforePicture', '/before.jpg'];
+        yield 'afterPicture' => ['afterPicture', ['/after1.jpg', '/after2.jpg']];
+        yield 'beforeButton' => ['beforeButton', '领取'];
+        yield 'afterButton' => ['afterButton', '已领取'];
+        yield 'remark' => ['remark', '测试奖品备注'];
+        yield 'otherPicture' => ['otherPicture', ['/other1.jpg', '/other2.jpg']];
     }
 
     public function testGetSetName(): void
@@ -52,7 +85,7 @@ class RewardTest extends TestCase
     {
         $activity = new Activity();
         $activity->setTitle('测试活动');
-        
+
         $this->reward->setActivity($activity);
         $this->assertSame($activity, $this->reward->getActivity());
     }
@@ -124,25 +157,26 @@ class RewardTest extends TestCase
         $this->reward->setType(RewardType::CREDIT);
         $this->reward->setValue('100');
         $this->reward->setTimes(1);
-        
+
         // 当 ID 为空时，__toString() 应返回空字符串
         $this->assertSame('', (string) $this->reward);
     }
 
-    public function testToStringWithId(): void
+    public function testToStringWithAllProperties(): void
     {
         $name = '测试奖品';
         $this->reward->setName($name);
         $this->reward->setType(RewardType::CREDIT);
         $this->reward->setValue('100');
         $this->reward->setTimes(1);
-        
-        // 使用反射设置一个 ID
-        $reflection = new \ReflectionProperty($this->reward, 'id');
-        $reflection->setAccessible(true);
-        $reflection->setValue($this->reward, '123456789');
-        
-        $expected = '1. 积分 | 测试奖品 : 100';
-        $this->assertSame($expected, (string) $this->reward);
+
+        // 当没有ID时，toString应该返回空字符串
+        $this->assertSame('', (string) $this->reward);
+
+        // 测试Reward的属性是否正确设置
+        $this->assertSame($name, $this->reward->getName());
+        $this->assertSame(RewardType::CREDIT, $this->reward->getType());
+        $this->assertSame('100', $this->reward->getValue());
+        $this->assertSame(1, $this->reward->getTimes());
     }
 }

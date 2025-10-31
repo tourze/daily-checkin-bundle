@@ -3,7 +3,6 @@
 namespace DailyCheckinBundle\Entity;
 
 use DailyCheckinBundle\Repository\AwardRepository;
-use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Serializer\Attribute\Ignore;
@@ -14,6 +13,8 @@ use Tourze\DoctrineUserBundle\Traits\BlameableAware;
 
 /**
  * 这里的award取的是名词的意思，有颁发之类的意思，跟Lottery那边有一点点区别
+ *
+ * @implements ApiArrayInterface<string, mixed>
  */
 #[ORM\Entity(repositoryClass: AwardRepository::class)]
 #[ORM\Table(name: 'daily_checkin_award', options: ['comment' => '签到奖励'])]
@@ -21,7 +22,6 @@ class Award implements ApiArrayInterface, \Stringable
 {
     use TimestampableAware;
     use SnowflakeKeyAware;
-
     use BlameableAware;
 
     #[Ignore]
@@ -39,7 +39,7 @@ class Award implements ApiArrayInterface, \Stringable
 
     public function __toString(): string
     {
-        return $this->getId() ?? '';
+        return (string) $this->getId();
     }
 
     public function getRecord(): ?Record
@@ -47,11 +47,9 @@ class Award implements ApiArrayInterface, \Stringable
         return $this->record;
     }
 
-    public function setRecord(?Record $record): self
+    public function setRecord(?Record $record): void
     {
         $this->record = $record;
-
-        return $this;
     }
 
     public function getReward(): ?Reward
@@ -59,11 +57,9 @@ class Award implements ApiArrayInterface, \Stringable
         return $this->reward;
     }
 
-    public function setReward(?Reward $reward): self
+    public function setReward(?Reward $reward): void
     {
         $this->reward = $reward;
-
-        return $this;
     }
 
     public function getUser(): ?UserInterface
@@ -71,13 +67,14 @@ class Award implements ApiArrayInterface, \Stringable
         return $this->user;
     }
 
-    public function setUser(?UserInterface $user): self
+    public function setUser(?UserInterface $user): void
     {
         $this->user = $user;
-
-        return $this;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function retrieveApiArray(): array
     {
         return [

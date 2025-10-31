@@ -23,4 +23,22 @@ enum RewardGetType: string implements Labelable, Itemable, Selectable
             self::OR => '或者',
         };
     }
+
+    /**
+     * 获取所有枚举的选项数组（用于下拉列表等）
+     *
+     * @return array<int, array{value: string, label: string}>
+     */
+    public static function toSelectItems(): array
+    {
+        $result = [];
+        foreach (self::cases() as $case) {
+            $result[] = [
+                'value' => $case->value,
+                'label' => $case->getLabel(),
+            ];
+        }
+
+        return $result;
+    }
 }
