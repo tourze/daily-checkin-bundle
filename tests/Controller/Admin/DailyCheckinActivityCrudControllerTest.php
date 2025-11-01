@@ -77,8 +77,7 @@ final class DailyCheckinActivityCrudControllerTest extends AbstractEasyAdminCont
 
     public function testBasicAdminAccessWorks(): void
     {
-        $client = self::createClientWithDatabase();
-        $this->loginAsAdmin($client);
+        $client = self::createAuthenticatedClient();
 
         // Test basic admin access works
         $client->request('GET', '/admin');
