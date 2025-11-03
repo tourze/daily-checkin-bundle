@@ -7,6 +7,7 @@ use Symfony\Bundle\SecurityBundle\SecurityBundle;
 use Symfony\Component\HttpKernel\Bundle\Bundle;
 use Tourze\BundleDependency\BundleDependencyInterface;
 use Tourze\DoctrineIndexedBundle\DoctrineIndexedBundle;
+use Tourze\EasyAdminMenuBundle\EasyAdminMenuBundle;
 use Tourze\JsonRPCLockBundle\JsonRPCLockBundle;
 use Tourze\JsonRPCSecurityBundle\JsonRPCSecurityBundle;
 
@@ -20,6 +21,7 @@ class DailyCheckinBundle extends Bundle implements BundleDependencyInterface
             SecurityBundle::class => ['all' => true],
             JsonRPCLockBundle::class => ['all' => true],
             JsonRPCSecurityBundle::class => ['all' => true],
+            EasyAdminMenuBundle::class => ['all' => true],
         ];
     }
 }
