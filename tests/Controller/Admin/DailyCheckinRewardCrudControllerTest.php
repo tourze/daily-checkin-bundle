@@ -85,11 +85,6 @@ final class DailyCheckinRewardCrudControllerTest extends AbstractEasyAdminContro
         yield 'updateTime' => ['updateTime'];
     }
 
-    protected function onSetUp(): void
-    {
-        // Setup for EasyAdmin controller tests
-    }
-
     public function testControllerInstanceCreation(): void
     {
         $controller = new DailyCheckinRewardCrudController();

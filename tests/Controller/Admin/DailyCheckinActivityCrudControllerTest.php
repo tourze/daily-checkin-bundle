@@ -64,11 +64,6 @@ final class DailyCheckinActivityCrudControllerTest extends AbstractEasyAdminCont
         yield 'checkinType' => ['checkinType'];
     }
 
-    protected function onSetUp(): void
-    {
-        // Setup for EasyAdmin controller tests
-    }
-
     public function testControllerInstanceCreation(): void
     {
         $controller = new DailyCheckinActivityCrudController();
