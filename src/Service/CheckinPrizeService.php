@@ -17,9 +17,8 @@ use Monolog\Attribute\WithMonologChannel;
 use Psr\Log\LoggerInterface;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Tourze\CouponCoreBundle\Service\CouponService;
-use Tourze\CreditServiceContracts\Service\CreditAccountServiceInterface;
-use Tourze\CreditServiceContracts\Service\CreditTransactionServiceInterface;
-use Tourze\CreditServiceContracts\Service\CreditTypeServiceInterface;
+use Tourze\IntegralServiceContracts\DTO\Request\IncreaseIntegralRequest;
+use Tourze\IntegralServiceContracts\IntegralServiceInterface;
 
 #[WithMonologChannel(channel: 'daily_checkin')]
 readonly class CheckinPrizeService
@@ -30,9 +29,7 @@ readonly class CheckinPrizeService
         private LoggerInterface $logger,
         private EventDispatcherInterface $eventDispatcher,
         private ?CouponService $couponService,
-        private ?CreditTypeServiceInterface $creditTypeService,
-        private ?CreditAccountServiceInterface $accountService,
-        private ?CreditTransactionServiceInterface $transactionService,
+        private ?IntegralServiceInterface $integralService,
         private EntityManagerInterface $entityManager,
     ) {
     }
@@ -244,41 +241,79 @@ readonly class CheckinPrizeService
 
     private function sendCreditPrize(Reward $reward, Record $record): void
     {
-        if (null === $this->accountService || null === $this->transactionService || null === $this->creditTypeService) {
+        if (null === $this->integralService) {
+            $this->logger->warning('IntegralService 未配置，跳过积分发放');
+
             return;
         }
 
         $user = $record->getUser();
         if (null === $user) {
+            $this->logger->warning('用户信息为空，跳过积分发放', [
+                'record_id' => $record->getId(),
+            ]);
+
             return;
         }
 
-        $integralName = $_ENV['DEFAULT_CREDIT_CURRENCY_CODE'] ?? 'CREDIT';
-        if (!is_string($integralName)) {
-            $integralName = 'CREDIT';
+        $amountStr = $reward->getValue();
+        if (null === $amountStr || '' === trim($amountStr)) {
+            $this->logger->warning('积分数量为空，跳过积分发放', [
+                'record_id' => $record->getId(),
+                'reward_id' => $reward->getId(),
+            ]);
+
+            return;
         }
-        $creditType = $this->creditTypeService->getCreditTypeByCode($integralName);
 
-        if (null !== $creditType) {
-            $inAccount = $this->accountService->getOrCreateAccount($user, $creditType->getId());
+        $amount = (int) $amountStr;
+        if ($amount <= 0) {
+            $this->logger->warning('积分数量无效，跳过积分发放', [
+                'record_id' => $record->getId(),
+                'reward_id' => $reward->getId(),
+                'amount_str' => $amountStr,
+                'amount' => $amount,
+            ]);
 
+            return;
+        }
+
+        try {
             $remark = $_ENV["CHECKIN_AWARD_CREDIT_{$record->getCheckinTimes()}_REMARK"]
                 ?? $_ENV['CHECKIN_AWARD_CREDIT_REMARK']
                 ?? "签到第{$record->getCheckinTimes()}次奖励";
 
-            // TODO: 积分发放功能需要根据实际积分服务实现进行调整
-            // 当前CreditTransactionServiceInterface接口中没有直接的积分增加方法
-            // 需要调用具体的积分服务实现，如CreditIncreaseService
-            // 这部分功能需要后续完善，暂时只创建奖励记录
+            $request = new IncreaseIntegralRequest(
+                userIdentifier: $user->getUserIdentifier(),
+                changeValue: $amount,
+                changeReason: $remark,
+                sourceId: "checkin_{$record->getId()}",
+                sourceType: 'daily_checkin',
+                remark: "签到活动奖励：{$record->getActivity()?->getName()}"
+            );
 
-            $this->logger->info('积分奖励记录已创建，积分发放功能待完善', [
+            $response = $this->integralService->increaseIntegral($request);
+
+            $this->logger->info('积分发放成功', [
                 'record_id' => $record->getId(),
                 'reward_id' => $reward->getId(),
-                'amount' => $reward->getValue(),
-                'user_class' => get_class($user),
+                'user_identifier' => $user->getUserIdentifier(),
+                'amount' => $amount,
+                'is_idempotent' => $response->isIdempotent,
             ]);
 
             $this->createAward($reward, $record);
+        } catch (\Throwable $e) {
+            $this->logger->error('积分发放失败', [
+                'record_id' => $record->getId(),
+                'reward_id' => $reward->getId(),
+                'user_identifier' => $user->getUserIdentifier(),
+                'amount' => $amount,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            throw $e;
         }
     }
 
