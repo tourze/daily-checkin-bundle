@@ -8,8 +8,8 @@ use DailyCheckinBundle\Enum\RewardType;
 use DailyCheckinBundle\Service\CheckinPrizeService;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
-use Symfony\Component\Security\Core\User\UserInterface;
 use Tourze\PHPUnitSymfonyKernelTest\AbstractIntegrationTestCase;
+use Tourze\UserServiceContracts\UserManagerInterface;
 
 /**
  * @internal
@@ -19,54 +19,12 @@ use Tourze\PHPUnitSymfonyKernelTest\AbstractIntegrationTestCase;
 final class CheckinPrizeServiceTest extends AbstractIntegrationTestCase
 {
     private CheckinPrizeService $service;
+    private UserManagerInterface $userManager;
 
     protected function onSetUp(): void
     {
         $this->service = self::getService(CheckinPrizeService::class);
-    }
-
-    // InterfaceStub方法 - 简化测试中的接口实现
-
-    /**
-     * 创建UserInterface的简单stub实现
-     *
-     * @param non-empty-string $userIdentifier 用户标识符，默认为'test-user'
-     * @param array<string> $roles 用户角色数组，默认为空数组
-     */
-    private function createUserStub(string $userIdentifier = 'test-user', array $roles = []): UserInterface
-    {
-        return new class($userIdentifier, $roles) implements UserInterface {
-            /**
-             * @param non-empty-string $userIdentifier
-             * @param array<string> $roles
-             */
-            public function __construct(
-                private string $userIdentifier,
-                private array $roles,
-            ) {
-            }
-
-            /**
-             * @return array<string>
-             */
-            public function getRoles(): array
-            {
-                return $this->roles;
-            }
-
-            public function eraseCredentials(): void
-            {
-                // 空实现 - stub不需要真正的凭据管理
-            }
-
-            /**
-             * @return non-empty-string
-             */
-            public function getUserIdentifier(): string
-            {
-                return $this->userIdentifier;
-            }
-        };
+        $this->userManager = self::getService(UserManagerInterface::class);
     }
 
     public function testServiceInstantiation(): void
@@ -76,8 +34,8 @@ final class CheckinPrizeServiceTest extends AbstractIntegrationTestCase
 
     public function testSendPrizeWithCouponReward(): void
     {
-        // 使用InterfaceStub方法创建用户
-        $user = $this->createUserStub('test-user');
+        // 使用 UserManagerInterface 创建真实用户
+        $user = $this->userManager->createUser('test-user-' . uniqid());
 
         // 创建真实的奖品实体
         $reward = new Reward();
@@ -98,8 +56,8 @@ final class CheckinPrizeServiceTest extends AbstractIntegrationTestCase
 
     public function testSendPrizeWithCreditReward(): void
     {
-        // 使用InterfaceStub方法创建用户
-        $user = $this->createUserStub('test-user');
+        // 使用 UserManagerInterface 创建真实用户
+        $user = $this->userManager->createUser('test-user-' . uniqid());
 
         // 创建真实的奖品实体
         $reward = new Reward();

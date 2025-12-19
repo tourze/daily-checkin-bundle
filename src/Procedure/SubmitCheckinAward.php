@@ -4,6 +4,7 @@ namespace DailyCheckinBundle\Procedure;
 
 use DailyCheckinBundle\Entity\Record;
 use DailyCheckinBundle\Entity\Reward;
+use DailyCheckinBundle\Param\SubmitCheckinAwardParam;
 use DailyCheckinBundle\Repository\RecordRepository;
 use DailyCheckinBundle\Repository\RewardRepository;
 use DailyCheckinBundle\Service\CheckinPrizeService;
@@ -13,6 +14,8 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Tourze\JsonRPC\Core\Attribute\MethodDoc;
 use Tourze\JsonRPC\Core\Attribute\MethodExpose;
 use Tourze\JsonRPC\Core\Attribute\MethodTag;
+use Tourze\JsonRPC\Core\Contracts\RpcParamInterface;
+use Tourze\JsonRPC\Core\Result\ArrayResult;
 use Tourze\JsonRPC\Core\Exception\ApiException;
 use Tourze\JsonRPCLockBundle\Procedure\LockableProcedure;
 use Tourze\JsonRPCLogBundle\Attribute\Log;
@@ -25,16 +28,6 @@ use Tourze\JsonRPCLogBundle\Attribute\Log;
 #[WithMonologChannel(channel: 'procedure')]
 class SubmitCheckinAward extends LockableProcedure
 {
-    /**
-     * @var string 奖励ID
-     */
-    public string $rewardId = '';
-
-    /**
-     * @var string 签到记录ID
-     */
-    public string $recordId = '';
-
     public function __construct(
         private readonly RecordRepository $recordRepository,
         private readonly RewardRepository $rewardRepository,
@@ -44,11 +37,11 @@ class SubmitCheckinAward extends LockableProcedure
     }
 
     /**
-     * @return array<string, mixed>
+     * @phpstan-param SubmitCheckinAwardParam $param
      */
-    public function execute(): array
+    public function execute(SubmitCheckinAwardParam|RpcParamInterface $param): ArrayResult
     {
-        $record = $this->recordRepository->find($this->recordId);
+        $record = $this->recordRepository->find($param->recordId);
         if (!$record instanceof Record) {
             throw new ApiException('签到记录不存在');
         }
@@ -66,7 +59,7 @@ class SubmitCheckinAward extends LockableProcedure
             throw new ApiException('已获得奖品');
         }
 
-        $reward = $this->rewardRepository->find($this->rewardId);
+        $reward = $this->rewardRepository->find($param->rewardId);
         if (!$reward instanceof Reward) {
             throw new ApiException('奖励不存在');
         }
@@ -82,7 +75,7 @@ class SubmitCheckinAward extends LockableProcedure
             throw new ApiException('奖品数据格式错误');
         }
         $rewardIds = array_column($orPrizes, 'id');
-        if (!in_array($this->rewardId, $rewardIds, true)) {
+        if (!in_array($param->rewardId, $rewardIds, true)) {
             throw new ApiException('无法获得该奖品');
         }
 

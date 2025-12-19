@@ -4,7 +4,7 @@ namespace DailyCheckinBundle\Event;
 
 use Symfony\Contracts\EventDispatcher\Event;
 
-class BeforeOrPrizeReturnEvent extends Event
+final class BeforeOrPrizeReturnEvent extends Event
 {
     /**
      * @var array<string, mixed>

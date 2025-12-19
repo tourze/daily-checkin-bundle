@@ -17,7 +17,7 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Tourze\JsonRPC\Core\Exception\ApiException;
-use Tourze\JsonRPC\Core\Tests\AbstractProcedureTestCase;
+use Tourze\PHPUnitJsonRPC\AbstractProcedureTestCase;
 
 /**
  * @internal
@@ -47,22 +47,24 @@ final class GetCheckinAwardsTest extends AbstractProcedureTestCase
 
         $activityId = $activity->getId();
         $this->assertNotNull($activityId, 'Activity ID should not be null after persistence');
-        $this->procedure->activityId = $activityId;
-        $result = $this->procedure->execute();
 
-        $this->assertIsArray($result);
+        $param = new \DailyCheckinBundle\Param\GetCheckinAwardsParam($activityId);
+        $result = $this->procedure->execute($param);
+
+        $this->assertInstanceOf(\Tourze\JsonRPC\Core\Result\ArrayResult::class, $result);
+        $this->assertIsArray($result->toArray());
     }
 
     public function testExecuteWithNonExistentActivity(): void
     {
         $user = $this->createNormalUser();
 
-        $this->procedure->activityId = 'non-existent-id';
+        $param = new \DailyCheckinBundle\Param\GetCheckinAwardsParam('non-existent-id');
 
         $this->expectException(ApiException::class);
         $this->expectExceptionMessage('暂无活动');
 
-        $this->procedure->execute();
+        $this->procedure->execute($param);
     }
 
     public function testExecuteWithRecordsAndAwards(): void
@@ -88,10 +90,11 @@ final class GetCheckinAwardsTest extends AbstractProcedureTestCase
 
         $activityId = $activity->getId();
         $this->assertNotNull($activityId, 'Activity ID should not be null after persistence');
-        $this->procedure->activityId = $activityId;
-        $result = $this->procedure->execute();
 
-        $this->assertNotEmpty($result);
+        $param = new \DailyCheckinBundle\Param\GetCheckinAwardsParam($activityId);
+        $result = $this->procedure->execute($param);
+
+        $this->assertNotEmpty($result->toArray());
     }
 
     public function testExecuteWithRecordsButNoShowablePrizes(): void
@@ -111,10 +114,11 @@ final class GetCheckinAwardsTest extends AbstractProcedureTestCase
 
         $activityId = $activity->getId();
         $this->assertNotNull($activityId, 'Activity ID should not be null after persistence');
-        $this->procedure->activityId = $activityId;
-        $result = $this->procedure->execute();
 
-        $this->assertEmpty($result);
+        $param = new \DailyCheckinBundle\Param\GetCheckinAwardsParam($activityId);
+        $result = $this->procedure->execute($param);
+
+        $this->assertEmpty($result->toArray());
     }
 
     private function createActivity(): Activity

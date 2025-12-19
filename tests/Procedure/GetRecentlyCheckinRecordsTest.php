@@ -6,12 +6,13 @@ use Carbon\CarbonImmutable;
 use DailyCheckinBundle\Entity\Activity;
 use DailyCheckinBundle\Entity\Record;
 use DailyCheckinBundle\Enum\CheckinType;
+use DailyCheckinBundle\Param\GetRecentlyCheckinRecordsParam;
 use DailyCheckinBundle\Procedure\GetRecentlyCheckinRecords;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Tourze\JsonRPC\Core\Exception\ApiException;
-use Tourze\JsonRPC\Core\Tests\AbstractProcedureTestCase;
+use Tourze\PHPUnitJsonRPC\AbstractProcedureTestCase;
 
 /**
  * @internal
@@ -47,10 +48,9 @@ final class GetRecentlyCheckinRecordsTest extends AbstractProcedureTestCase
 
         $activityId = $activity->getId();
         $this->assertNotNull($activityId, 'Activity ID should not be null after persistence');
-        $this->procedure->activityId = $activityId;
-        $this->procedure->nums = 4;
 
-        $result = $this->procedure->execute();
+        $param = new GetRecentlyCheckinRecordsParam($activityId, 4);
+        $result = $this->procedure->execute($param);
 
         $this->assertArrayHasKey('data', $result);
         $this->assertIsArray($result['data']);
@@ -65,12 +65,12 @@ final class GetRecentlyCheckinRecordsTest extends AbstractProcedureTestCase
 
     public function testExecuteWithNonExistentActivity(): void
     {
-        $this->procedure->activityId = 'non-existent-id';
+        $param = new GetRecentlyCheckinRecordsParam('non-existent-id', 4);
 
         $this->expectException(ApiException::class);
         $this->expectExceptionMessage('暂无活动');
 
-        $this->procedure->execute();
+        $this->procedure->execute($param);
     }
 
     public function testExecuteWithNoRecords(): void
@@ -80,10 +80,9 @@ final class GetRecentlyCheckinRecordsTest extends AbstractProcedureTestCase
 
         $activityId = $activity->getId();
         $this->assertNotNull($activityId, 'Activity ID should not be null after persistence');
-        $this->procedure->activityId = $activityId;
-        $this->procedure->nums = 4;
 
-        $result = $this->procedure->execute();
+        $param = new GetRecentlyCheckinRecordsParam($activityId, 4);
+        $result = $this->procedure->execute($param);
 
         $this->assertArrayHasKey('data', $result);
         $this->assertEmpty($result['data']);
@@ -107,10 +106,9 @@ final class GetRecentlyCheckinRecordsTest extends AbstractProcedureTestCase
 
         $activityId = $activity->getId();
         $this->assertNotNull($activityId, 'Activity ID should not be null after persistence');
-        $this->procedure->activityId = $activityId;
-        $this->procedure->nums = 2;
 
-        $result = $this->procedure->execute();
+        $param = new GetRecentlyCheckinRecordsParam($activityId, 2);
+        $result = $this->procedure->execute($param);
 
         $this->assertArrayHasKey('data', $result);
         $this->assertIsArray($result['data']);
@@ -128,10 +126,9 @@ final class GetRecentlyCheckinRecordsTest extends AbstractProcedureTestCase
 
         $activityId = $activity->getId();
         $this->assertNotNull($activityId, 'Activity ID should not be null after persistence');
-        $this->procedure->activityId = $activityId;
-        $this->procedure->nums = 10;
 
-        $result = $this->procedure->execute();
+        $param = new GetRecentlyCheckinRecordsParam($activityId, 10);
+        $result = $this->procedure->execute($param);
 
         $this->assertArrayHasKey('data', $result);
         $this->assertIsArray($result['data']);

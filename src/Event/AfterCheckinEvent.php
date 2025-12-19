@@ -6,7 +6,7 @@ use DailyCheckinBundle\Entity\Award;
 use DailyCheckinBundle\Entity\Record;
 use Symfony\Contracts\EventDispatcher\Event;
 
-class AfterCheckinEvent extends Event
+final class AfterCheckinEvent extends Event
 {
     /**
      * @var array<string, mixed>

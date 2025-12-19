@@ -4,7 +4,7 @@ namespace DailyCheckinBundle\DependencyInjection;
 
 use Tourze\SymfonyDependencyServiceLoader\AutoExtension;
 
-class DailyCheckinExtension extends AutoExtension
+final class DailyCheckinExtension extends AutoExtension
 {
     protected function getConfigDir(): string
     {

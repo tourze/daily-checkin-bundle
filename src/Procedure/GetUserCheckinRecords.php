@@ -4,6 +4,7 @@ namespace DailyCheckinBundle\Procedure;
 
 use DailyCheckinBundle\Entity\Activity;
 use DailyCheckinBundle\Entity\Record;
+use DailyCheckinBundle\Param\GetUserCheckinRecordsParam;
 use DailyCheckinBundle\Repository\ActivityRepository;
 use DailyCheckinBundle\Repository\RecordRepository;
 use DailyCheckinBundle\Service\CheckinPrizeService;
@@ -11,8 +12,9 @@ use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Tourze\JsonRPC\Core\Attribute\MethodDoc;
 use Tourze\JsonRPC\Core\Attribute\MethodExpose;
-use Tourze\JsonRPC\Core\Attribute\MethodParam;
 use Tourze\JsonRPC\Core\Attribute\MethodTag;
+use Tourze\JsonRPC\Core\Contracts\RpcParamInterface;
+use Tourze\JsonRPC\Core\Result\ArrayResult;
 use Tourze\JsonRPC\Core\Exception\ApiException;
 use Tourze\JsonRPC\Core\Procedure\BaseProcedure;
 
@@ -22,9 +24,6 @@ use Tourze\JsonRPC\Core\Procedure\BaseProcedure;
 #[MethodExpose(method: 'GetUserCheckinRecords')]
 class GetUserCheckinRecords extends BaseProcedure
 {
-    #[MethodParam(description: '签到活动ID')]
-    public string $activityId;
-
     public function __construct(
         private readonly Security $security,
         private readonly ActivityRepository $activityRepository,
@@ -34,23 +33,23 @@ class GetUserCheckinRecords extends BaseProcedure
     }
 
     /**
-     * @return array<string, mixed>
+     * @phpstan-param GetUserCheckinRecordsParam $param
      */
-    public function execute(): array
+    public function execute(GetUserCheckinRecordsParam|RpcParamInterface $param): ArrayResult
     {
-        $activity = $this->getActivity();
+        $activity = $this->getActivity($param);
         $records = $this->getRecords($activity);
         $list = $this->processRecords($records);
 
-        return [
+        return new ArrayResult([
             'data' => $list,
-        ];
+        ]);
     }
 
-    private function getActivity(): Activity
+    private function getActivity(GetUserCheckinRecordsParam $param): Activity
     {
         $activity = $this->activityRepository->findOneBy([
-            'id' => $this->activityId,
+            'id' => $param->activityId,
         ]);
 
         if (!$activity instanceof Activity) {

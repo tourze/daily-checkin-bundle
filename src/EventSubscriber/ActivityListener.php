@@ -9,7 +9,7 @@ use Doctrine\ORM\Events;
 
 #[AsEntityListener(event: Events::prePersist, method: 'prePersist', entity: Activity::class)]
 #[AsEntityListener(event: Events::preUpdate, method: 'preUpdate', entity: Activity::class)]
-class ActivityListener
+final class ActivityListener
 {
     public function prePersist(Activity $object): void
     {

@@ -5,7 +5,7 @@ namespace DailyCheckinBundle\Event;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Contracts\EventDispatcher\Event;
 
-class BeforeReturnCheckinAwardsEvent extends Event
+final class BeforeReturnCheckinAwardsEvent extends Event
 {
     /**
      * @var array<string, mixed>

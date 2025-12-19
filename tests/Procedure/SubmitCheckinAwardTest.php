@@ -15,7 +15,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Tourze\JsonRPC\Core\Exception\ApiException;
-use Tourze\JsonRPC\Core\Tests\AbstractProcedureTestCase;
+use Tourze\PHPUnitJsonRPC\AbstractProcedureTestCase;
 
 /**
  * @internal
@@ -43,13 +43,15 @@ final class SubmitCheckinAwardTest extends AbstractProcedureTestCase
 
     public function testExecuteWithNonExistentRecord(): void
     {
-        $this->procedure->recordId = 'non-existent-record-id';
-        $this->procedure->rewardId = 'some-reward-id';
+        $param = new \DailyCheckinBundle\Param\SubmitCheckinAwardParam(
+            rewardId: 'some-reward-id',
+            recordId: 'non-existent-record-id'
+        );
 
         $this->expectException(ApiException::class);
         $this->expectExceptionMessage('签到记录不存在');
 
-        $this->procedure->execute();
+        $this->procedure->execute($param);
     }
 
     public function testExecuteWithRecordWithoutAward(): void
@@ -63,13 +65,15 @@ final class SubmitCheckinAwardTest extends AbstractProcedureTestCase
 
         $recordId = $record->getId();
         $this->assertNotNull($recordId, 'Record ID should not be null after persistence');
-        $this->procedure->recordId = $recordId;
-        $this->procedure->rewardId = 'some-reward-id';
+        $param = new \DailyCheckinBundle\Param\SubmitCheckinAwardParam(
+            rewardId: 'some-reward-id',
+            recordId: $recordId
+        );
 
         $this->expectException(ApiException::class);
         $this->expectExceptionMessage('无法获得奖品');
 
-        $this->procedure->execute();
+        $this->procedure->execute($param);
     }
 
     public function testExecuteWithAlreadyAwardedRecord(): void
@@ -90,13 +94,15 @@ final class SubmitCheckinAwardTest extends AbstractProcedureTestCase
         $rewardId = $reward->getId();
         $this->assertNotNull($recordId, 'Record ID should not be null after persistence');
         $this->assertNotNull($rewardId, 'Reward ID should not be null after persistence');
-        $this->procedure->recordId = $recordId;
-        $this->procedure->rewardId = $rewardId;
+        $param = new \DailyCheckinBundle\Param\SubmitCheckinAwardParam(
+            rewardId: $rewardId,
+            recordId: $recordId
+        );
 
         $this->expectException(ApiException::class);
         $this->expectExceptionMessage('已获得奖品');
 
-        $this->procedure->execute();
+        $this->procedure->execute($param);
     }
 
     public function testExecuteWithNonExistentReward(): void
@@ -110,13 +116,15 @@ final class SubmitCheckinAwardTest extends AbstractProcedureTestCase
 
         $recordId = $record->getId();
         $this->assertNotNull($recordId, 'Record ID should not be null after persistence');
-        $this->procedure->recordId = $recordId;
-        $this->procedure->rewardId = 'non-existent-reward-id';
+        $param = new \DailyCheckinBundle\Param\SubmitCheckinAwardParam(
+            rewardId: 'non-existent-reward-id',
+            recordId: $recordId
+        );
 
         $this->expectException(ApiException::class);
         $this->expectExceptionMessage('奖励不存在');
 
-        $this->procedure->execute();
+        $this->procedure->execute($param);
     }
 
     private function createActivity(): Activity

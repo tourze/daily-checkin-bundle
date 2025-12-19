@@ -2,11 +2,12 @@
 
 namespace DailyCheckinBundle\Tests\Procedure;
 
+use DailyCheckinBundle\Param\DoCheckinParam;
 use DailyCheckinBundle\Procedure\DoCheckin;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 use Tourze\JsonRPC\Core\Model\JsonRpcRequest;
-use Tourze\JsonRPC\Core\Tests\AbstractProcedureTestCase;
+use Tourze\PHPUnitJsonRPC\AbstractProcedureTestCase;
 
 /**
  * @internal
@@ -47,11 +48,24 @@ final class DoCheckinTest extends AbstractProcedureTestCase
         $this->assertTrue($reflection->isPublic());
     }
 
-    public function testActivityIdPropertyCanBeSet(): void
+    public function testExecuteWithDoCheckinParam(): void
     {
-        $testActivityId = 'test-activity-id-' . uniqid();
-        $this->procedure->activityId = $testActivityId;
+        $param = new DoCheckinParam(
+            activityId: 'test-activity-id-' . uniqid(),
+            checkinDate: ''
+        );
 
-        $this->assertSame($testActivityId, $this->procedure->activityId);
+        // 验证参数可以正确传递给 execute 方法
+        $reflection = new \ReflectionMethod($this->procedure, 'execute');
+        $this->assertTrue($reflection->isPublic());
+        $parameters = $reflection->getParameters();
+        $this->assertCount(1, $parameters);
+        $paramType = $parameters[0]->getType();
+        $this->assertNotNull($paramType);
+
+        // 验证类型包含 DoCheckinParam
+        $typeString = $paramType->__toString();
+        $this->assertStringContainsString(DoCheckinParam::class, $typeString);
+        $this->assertStringContainsString('RpcParamInterface', $typeString);
     }
 }

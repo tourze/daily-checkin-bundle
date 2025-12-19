@@ -289,7 +289,7 @@ readonly class CheckinPrizeService
                 changeReason: $remark,
                 sourceId: "checkin_{$record->getId()}",
                 sourceType: 'daily_checkin',
-                remark: "签到活动奖励：{$record->getActivity()?->getName()}"
+                remark: "签到活动奖励：{$record->getActivity()?->getTitle()}"
             );
 
             $response = $this->integralService->increaseIntegral($request);

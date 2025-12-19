@@ -17,7 +17,7 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
 use Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Tourze\JsonRPC\Core\Exception\ApiException;
-use Tourze\JsonRPC\Core\Tests\AbstractProcedureTestCase;
+use Tourze\PHPUnitJsonRPC\AbstractProcedureTestCase;
 
 /**
  * @internal
@@ -47,8 +47,9 @@ final class GetUserCheckinRecordsTest extends AbstractProcedureTestCase
 
         $activityId = $activity->getId();
         $this->assertNotNull($activityId, 'Activity ID should not be null after persistence');
-        $this->procedure->activityId = $activityId;
-        $result = $this->procedure->execute();
+
+        $param = new \DailyCheckinBundle\Param\GetUserCheckinRecordsParam($activityId);
+        $result = $this->procedure->execute($param);
 
         $this->assertArrayHasKey('data', $result);
     }
@@ -57,12 +58,12 @@ final class GetUserCheckinRecordsTest extends AbstractProcedureTestCase
     {
         $user = $this->createNormalUser();
 
-        $this->procedure->activityId = 'non-existent-id';
+        $param = new \DailyCheckinBundle\Param\GetUserCheckinRecordsParam('non-existent-id');
 
         $this->expectException(ApiException::class);
         $this->expectExceptionMessage('暂无活动');
 
-        $this->procedure->execute();
+        $this->procedure->execute($param);
     }
 
     public function testExecuteWithNoRecords(): void
@@ -74,8 +75,9 @@ final class GetUserCheckinRecordsTest extends AbstractProcedureTestCase
 
         $activityId = $activity->getId();
         $this->assertNotNull($activityId, 'Activity ID should not be null after persistence');
-        $this->procedure->activityId = $activityId;
-        $result = $this->procedure->execute();
+
+        $param = new \DailyCheckinBundle\Param\GetUserCheckinRecordsParam($activityId);
+        $result = $this->procedure->execute($param);
 
         $this->assertArrayHasKey('data', $result);
         $this->assertEmpty($result['data']);
@@ -104,8 +106,9 @@ final class GetUserCheckinRecordsTest extends AbstractProcedureTestCase
 
         $activityId = $activity->getId();
         $this->assertNotNull($activityId, 'Activity ID should not be null after persistence');
-        $this->procedure->activityId = $activityId;
-        $result = $this->procedure->execute();
+
+        $param = new \DailyCheckinBundle\Param\GetUserCheckinRecordsParam($activityId);
+        $result = $this->procedure->execute($param);
 
         $this->assertArrayHasKey('data', $result);
         $this->assertNotEmpty($result['data']);
@@ -136,8 +139,9 @@ final class GetUserCheckinRecordsTest extends AbstractProcedureTestCase
 
         $activityId = $activity->getId();
         $this->assertNotNull($activityId, 'Activity ID should not be null after persistence');
-        $this->procedure->activityId = $activityId;
-        $result = $this->procedure->execute();
+
+        $param = new \DailyCheckinBundle\Param\GetUserCheckinRecordsParam($activityId);
+        $result = $this->procedure->execute($param);
 
         $this->assertArrayHasKey('data', $result);
         $this->assertNotEmpty($result['data']);
@@ -169,8 +173,9 @@ final class GetUserCheckinRecordsTest extends AbstractProcedureTestCase
 
         $activityId = $activity->getId();
         $this->assertNotNull($activityId, 'Activity ID should not be null after persistence');
-        $this->procedure->activityId = $activityId;
-        $result = $this->procedure->execute();
+
+        $param = new \DailyCheckinBundle\Param\GetUserCheckinRecordsParam($activityId);
+        $result = $this->procedure->execute($param);
 
         $this->assertArrayHasKey('data', $result);
         $this->assertIsArray($result['data']);

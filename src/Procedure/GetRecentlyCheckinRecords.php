@@ -4,12 +4,14 @@ namespace DailyCheckinBundle\Procedure;
 
 use DailyCheckinBundle\Entity\Activity;
 use DailyCheckinBundle\Entity\Record;
+use DailyCheckinBundle\Param\GetRecentlyCheckinRecordsParam;
 use DailyCheckinBundle\Repository\ActivityRepository;
 use DailyCheckinBundle\Repository\RecordRepository;
 use Tourze\JsonRPC\Core\Attribute\MethodDoc;
 use Tourze\JsonRPC\Core\Attribute\MethodExpose;
-use Tourze\JsonRPC\Core\Attribute\MethodParam;
 use Tourze\JsonRPC\Core\Attribute\MethodTag;
+use Tourze\JsonRPC\Core\Contracts\RpcParamInterface;
+use Tourze\JsonRPC\Core\Result\ArrayResult;
 use Tourze\JsonRPC\Core\Exception\ApiException;
 use Tourze\JsonRPC\Core\Procedure\BaseProcedure;
 
@@ -18,12 +20,6 @@ use Tourze\JsonRPC\Core\Procedure\BaseProcedure;
 #[MethodExpose(method: 'GetRecentlyCheckinRecords')]
 class GetRecentlyCheckinRecords extends BaseProcedure
 {
-    #[MethodParam(description: '签到活动ID')]
-    public string $activityId;
-
-    #[MethodParam(description: '记录条数')]
-    public int $nums = 4;
-
     public function __construct(
         private readonly ActivityRepository $activityRepository,
         private readonly RecordRepository $recordRepository,
@@ -31,18 +27,18 @@ class GetRecentlyCheckinRecords extends BaseProcedure
     }
 
     /**
-     * @return array<string, mixed>
+     * @phpstan-param GetRecentlyCheckinRecordsParam $param
      */
-    public function execute(): array
+    public function execute(GetRecentlyCheckinRecordsParam|RpcParamInterface $param): ArrayResult
     {
         $activity = $this->activityRepository->findOneBy([
-            'id' => $this->activityId,
+            'id' => $param->activityId,
         ]);
         if (!$activity instanceof Activity) {
             throw new ApiException('暂无活动');
         }
 
-        $records = $this->recordRepository->findRecentRecordsWithJoins($activity, $this->nums);
+        $records = $this->recordRepository->findRecentRecordsWithJoins($activity, $param->nums);
 
         /** @var array<Record> $records */
         $list = [];
@@ -50,6 +46,6 @@ class GetRecentlyCheckinRecords extends BaseProcedure
             $list[] = $record->retrieveApiArray();
         }
 
-        return ['data' => $list];
+        return new ArrayResult(['data' => $list]);
     }
 }

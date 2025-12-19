@@ -8,6 +8,7 @@ use DailyCheckinBundle\Entity\Record;
 use DailyCheckinBundle\Entity\Reward;
 use DailyCheckinBundle\Enum\CheckinType;
 use DailyCheckinBundle\Event\AfterCheckinEvent;
+use DailyCheckinBundle\Param\DoCheckinParam;
 use DailyCheckinBundle\Repository\ActivityRepository;
 use DailyCheckinBundle\Repository\RecordRepository;
 use DailyCheckinBundle\Service\CheckinPrizeService;
@@ -19,8 +20,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Tourze\JsonRPC\Core\Attribute\MethodDoc;
 use Tourze\JsonRPC\Core\Attribute\MethodExpose;
-use Tourze\JsonRPC\Core\Attribute\MethodParam;
 use Tourze\JsonRPC\Core\Attribute\MethodTag;
+use Tourze\JsonRPC\Core\Contracts\RpcParamInterface;
+use Tourze\JsonRPC\Core\Result\ArrayResult;
 use Tourze\JsonRPC\Core\Exception\ApiException;
 use Tourze\JsonRPC\Core\Model\JsonRpcRequest;
 use Tourze\JsonRPCLockBundle\Procedure\LockableProcedure;
@@ -35,14 +37,6 @@ use Tourze\JsonRPCLogBundle\Procedure\LogFormatProcedure;
 #[WithMonologChannel(channel: 'procedure')]
 class DoCheckin extends LockableProcedure implements LogFormatProcedure
 {
-    #[MethodParam(description: '签到活动ID')]
-    public string $activityId;
-
-    /**
-     * @var string 签到日期，当不传入时，代表的是请求时日期
-     */
-    public string $checkinDate = '';
-
     public function __construct(
         private readonly ActivityRepository $activityRepository,
         private readonly RecordRepository $recordRepository,
@@ -55,13 +49,13 @@ class DoCheckin extends LockableProcedure implements LogFormatProcedure
     }
 
     /**
-     * @return array<string, mixed>
+     * @phpstan-param DoCheckinParam $param
      */
-    public function execute(): array
+    public function execute(DoCheckinParam|RpcParamInterface $param): ArrayResult
     {
         $now = CarbonImmutable::now();
-        $activity = $this->getActiveActivity($now);
-        $checkinDate = $this->getCheckinDate($now);
+        $activity = $this->getActiveActivity($now, $param);
+        $checkinDate = $this->getCheckinDate($now, $param);
 
         // 检查今日是否已签到
         $existingRecord = $this->checkExistingCheckin($activity, $checkinDate);
@@ -82,14 +76,15 @@ class DoCheckin extends LockableProcedure implements LogFormatProcedure
         $result = $this->processPrizes($activity, $record);
 
         // 触发事件
-        return $this->dispatchAfterCheckinEvent($record, $result);
+        $finalResult = $this->dispatchAfterCheckinEvent($record, $result);
+        return new ArrayResult($finalResult);
     }
 
-    private function getActiveActivity(CarbonImmutable $now): Activity
+    private function getActiveActivity(CarbonImmutable $now, DoCheckinParam $param): Activity
     {
         $activity = $this->activityRepository->createQueryBuilder('a')
             ->where('a.id=:id AND a.startTime <= :startTime and a.endTime > :endTime')
-            ->setParameter('id', $this->activityId)
+            ->setParameter('id', $param->activityId)
             ->setParameter('endTime', $now)
             ->setParameter('startTime', $now)
             ->setMaxResults(1)
@@ -104,9 +99,9 @@ class DoCheckin extends LockableProcedure implements LogFormatProcedure
         return $activity;
     }
 
-    private function getCheckinDate(CarbonImmutable $now): CarbonImmutable
+    private function getCheckinDate(CarbonImmutable $now, DoCheckinParam $param): CarbonImmutable
     {
-        return '' !== $this->checkinDate ? CarbonImmutable::parse($this->checkinDate) : $now;
+        return '' !== $param->checkinDate ? CarbonImmutable::parse($param->checkinDate) : $now;
     }
 
     private function checkExistingCheckin(Activity $activity, CarbonImmutable $checkinDate): ?Record
@@ -264,7 +259,7 @@ class DoCheckin extends LockableProcedure implements LogFormatProcedure
         $event->setResult($result);
         $this->eventDispatcher->dispatch($event);
 
-        return $event->getResult();
+        return new ArrayResult($event->getResult());
     }
 
     public function generateFormattedLogText(JsonRpcRequest $request): string

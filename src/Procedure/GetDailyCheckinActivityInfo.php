@@ -7,6 +7,7 @@ use DailyCheckinBundle\Entity\Activity;
 use DailyCheckinBundle\Entity\Record;
 use DailyCheckinBundle\Enum\CheckinType;
 use DailyCheckinBundle\Event\BeforeReturnCheckinActivityEvent;
+use DailyCheckinBundle\Param\GetDailyCheckinActivityInfoParam;
 use DailyCheckinBundle\Repository\ActivityRepository;
 use DailyCheckinBundle\Repository\RecordRepository;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -14,8 +15,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Tourze\JsonRPC\Core\Attribute\MethodDoc;
 use Tourze\JsonRPC\Core\Attribute\MethodExpose;
-use Tourze\JsonRPC\Core\Attribute\MethodParam;
 use Tourze\JsonRPC\Core\Attribute\MethodTag;
+use Tourze\JsonRPC\Core\Contracts\RpcParamInterface;
+use Tourze\JsonRPC\Core\Result\ArrayResult;
 use Tourze\JsonRPC\Core\Exception\ApiException;
 use Tourze\JsonRPC\Core\Procedure\BaseProcedure;
 
@@ -25,9 +27,6 @@ use Tourze\JsonRPC\Core\Procedure\BaseProcedure;
 #[MethodExpose(method: 'GetDailyCheckinActivityInfo')]
 class GetDailyCheckinActivityInfo extends BaseProcedure
 {
-    #[MethodParam(description: '签到活动ID')]
-    public string $activityId;
-
     public function __construct(
         private readonly Security $security,
         private readonly ActivityRepository $activityRepository,
@@ -37,11 +36,11 @@ class GetDailyCheckinActivityInfo extends BaseProcedure
     }
 
     /**
-     * @return array<string, mixed>
+     * @phpstan-param GetDailyCheckinActivityInfoParam $param
      */
-    public function execute(): array
+    public function execute(GetDailyCheckinActivityInfoParam|RpcParamInterface $param): ArrayResult
     {
-        $activity = $this->getActivity();
+        $activity = $this->getActivity($param);
         $result = [
             'activity' => $activity->retrieveApiArray(),
             'accumulatedDays' => 0,
@@ -56,13 +55,14 @@ class GetDailyCheckinActivityInfo extends BaseProcedure
             $result = $this->processContinuousCheckin($activity, $result);
         }
 
-        return $this->dispatchEvent($result);
+        $finalResult = $this->dispatchEvent($result);
+        return new ArrayResult($finalResult);
     }
 
-    private function getActivity(): Activity
+    private function getActivity(GetDailyCheckinActivityInfoParam $param): Activity
     {
         $activity = $this->activityRepository->findOneBy([
-            'id' => $this->activityId,
+            'id' => $param->activityId,
         ]);
 
         if (!$activity instanceof Activity) {

@@ -5,6 +5,7 @@ namespace DailyCheckinBundle\Procedure;
 use DailyCheckinBundle\Entity\Award;
 use DailyCheckinBundle\Entity\Record;
 use DailyCheckinBundle\Event\BeforeReturnCheckinAwardsEvent;
+use DailyCheckinBundle\Param\GetCheckinAwardsParam;
 use DailyCheckinBundle\Repository\ActivityRepository;
 use DailyCheckinBundle\Repository\RecordRepository;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -12,8 +13,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Tourze\JsonRPC\Core\Attribute\MethodDoc;
 use Tourze\JsonRPC\Core\Attribute\MethodExpose;
-use Tourze\JsonRPC\Core\Attribute\MethodParam;
 use Tourze\JsonRPC\Core\Attribute\MethodTag;
+use Tourze\JsonRPC\Core\Contracts\RpcParamInterface;
+use Tourze\JsonRPC\Core\Result\ArrayResult;
 use Tourze\JsonRPC\Core\Exception\ApiException;
 use Tourze\JsonRPC\Core\Procedure\BaseProcedure;
 
@@ -23,9 +25,6 @@ use Tourze\JsonRPC\Core\Procedure\BaseProcedure;
 #[MethodExpose(method: 'GetCheckinAwards')]
 class GetCheckinAwards extends BaseProcedure
 {
-    #[MethodParam(description: '签到活动ID')]
-    public string $activityId;
-
     public function __construct(
         private readonly Security $security,
         private readonly ActivityRepository $activityRepository,
@@ -34,10 +33,13 @@ class GetCheckinAwards extends BaseProcedure
     ) {
     }
 
-    public function execute(): array
+    /**
+     * @phpstan-param GetCheckinAwardsParam $param
+     */
+    public function execute(GetCheckinAwardsParam|RpcParamInterface $param): ArrayResult
     {
         $activity = $this->activityRepository->findOneBy([
-            'id' => $this->activityId,
+            'id' => $param->activityId,
         ]);
         if (null === $activity) {
             throw new ApiException('暂无活动');
@@ -70,6 +72,6 @@ class GetCheckinAwards extends BaseProcedure
         $event->setUser($this->security->getUser());
         $this->eventDispatcher->dispatch($event);
 
-        return $event->getResult();
+        return new ArrayResult($event->getResult());
     }
 }
