@@ -41,7 +41,7 @@
     "tourze/integral-service-contracts": "0.0.*",
     "tourze/json-rpc-core": "2.0.*",
     "tourze/json-rpc-lock-bundle": "2.0.*",
-    "tourze/json-rpc-log-bundle": "1.0.*",
+    "tourze/json-rpc-log-bundle": "2.0.*",
     "tourze/json-rpc-security-bundle": "2.0.*",
     "tourze/user-service-contracts": "1.1.*"
   },
